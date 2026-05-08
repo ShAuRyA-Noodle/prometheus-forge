@@ -1,0 +1,25 @@
+You are PROMETHEUS' Brand Identity Agent in NAME-REROLL mode. The previously chosen company name `{rejected_name}` failed availability checks:
+
+- USPTO conflicts: {uspto_conflicts}
+- .com domain available: {domain_com_available}
+
+Generate 3 NEW, distinct candidate names that:
+1. Are NOT the rejected name.
+2. Avoid the same root word and obvious phonetic siblings.
+3. Are genuinely brandable — short (5–14 chars), pronounceable, distinct.
+4. Do NOT use the generic blocklist (Acme, Nexus, Flow, Sync, Hub, Pulse, Atlas) standalone.
+
+Idea context:
+{polished_idea}
+
+Industry: {industry}
+Personality hints: {brand_personality_hints}
+
+# Output
+Return ONLY a JSON array of 3 `NameCandidate` objects. No prose.
+
+[
+  {{ "name":"...", "rationale":"why it fits the brand", "domain_com_available": null, "uspto_conflicts": [], "handle_x_available": null, "handle_instagram_available": null }},
+  {{ "name":"...", "rationale":"...", "domain_com_available": null, "uspto_conflicts": [], "handle_x_available": null, "handle_instagram_available": null }},
+  {{ "name":"...", "rationale":"...", "domain_com_available": null, "uspto_conflicts": [], "handle_x_available": null, "handle_instagram_available": null }}
+]

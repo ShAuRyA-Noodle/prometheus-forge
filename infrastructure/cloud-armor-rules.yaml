@@ -1,0 +1,195 @@
+# PROMETHEUS V2 — Cloud Armor security policy
+# Attaches to the global HTTPS load balancer fronting the Cloud Run gateway.
+#
+# Apply:
+#   gcloud compute security-policies import prometheus-armor \
+#     --source=infrastructure/cloud-armor-rules.yaml \
+#     --file-format=yaml
+#
+# Defense layers (priority order):
+#   500   — preconfigured WAF (OWASP CRS via Cloud Armor preconfigured rules)
+#   1000  — block known bot UAs
+#   1100  — block JA4 fingerprints we've seen abuse from
+#   2000  — geo allowlist (US/EU/UK/CA/AU/IN/SG)
+#   3000  — per-IP rate limit 60/min
+#   3100  — per-IP ban for 1h on 10 abuse signals
+#   4000  — bot-management redirect challenge for /api/generate
+#   2147483647 — default allow
+
+name: prometheus-armor
+description: "PROMETHEUS V2 edge protection: WAF + geo + rate limit + bot mgmt"
+type: CLOUD_ARMOR_EDGE
+adaptiveProtectionConfig:
+  layer7DdosDefenseConfig:
+    enable: true
+    ruleVisibility: STANDARD
+
+rules:
+  # ---------- 100: OWASP CRS — SQL injection ----------
+  - priority: 100
+    description: "Block SQLi (CRS sqli-v33-stable, sensitivity 2)"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('sqli-v33-stable', {'sensitivity': 2})"
+    action: deny(403)
+    preview: false
+
+  # ---------- 110: OWASP CRS — XSS ----------
+  - priority: 110
+    description: "Block XSS"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('xss-v33-stable', {'sensitivity': 2})"
+    action: deny(403)
+
+  # ---------- 120: LFI ----------
+  - priority: 120
+    description: "Block local file inclusion"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('lfi-v33-stable', {'sensitivity': 1})"
+    action: deny(403)
+
+  # ---------- 130: RCE ----------
+  - priority: 130
+    description: "Block remote code execution"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('rce-v33-stable', {'sensitivity': 1})"
+    action: deny(403)
+
+  # ---------- 140: Protocol attack ----------
+  - priority: 140
+    description: "Block protocol attacks (HTTP smuggling, header injection)"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('protocolattack-v33-stable', {'sensitivity': 1})"
+    action: deny(403)
+
+  # ---------- 150: Scanner detection ----------
+  - priority: 150
+    description: "Block known vulnerability scanners (nikto, sqlmap, nmap, masscan)"
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('scannerdetection-v33-stable', {'sensitivity': 1})"
+    action: deny(403)
+
+  # ---------- 1000: Block known bot user-agents ----------
+  - priority: 1000
+    description: "Block known scraper/abuse user-agents"
+    match:
+      expr:
+        expression: |
+          has(request.headers['user-agent']) && (
+            request.headers['user-agent'].lowerAscii().contains('semrushbot') ||
+            request.headers['user-agent'].lowerAscii().contains('mj12bot') ||
+            request.headers['user-agent'].lowerAscii().contains('ahrefsbot') ||
+            request.headers['user-agent'].lowerAscii().contains('dotbot') ||
+            request.headers['user-agent'].lowerAscii().contains('petalbot') ||
+            request.headers['user-agent'].lowerAscii().contains('blexbot') ||
+            request.headers['user-agent'].lowerAscii().contains('gptbot') ||
+            request.headers['user-agent'].lowerAscii().contains('sqlmap') ||
+            request.headers['user-agent'].lowerAscii().contains('nikto') ||
+            request.headers['user-agent'].lowerAscii().contains('curl/7.') ||
+            request.headers['user-agent'].lowerAscii().contains('python-requests') ||
+            request.headers['user-agent'] == ''
+          )
+    action: deny(403)
+
+  # ---------- 1100: JA4 fingerprint quotas ----------
+  - priority: 1100
+    description: "Per-JA4-fingerprint quota: 30 req/min (catches headless browser fleets)"
+    match:
+      expr:
+        expression: "true"
+    action: rate_based_ban
+    rateLimitOptions:
+      enforceOnKey: TLS_JA4_FINGERPRINT
+      rateLimitThreshold:
+        count: 30
+        intervalSec: 60
+      banThreshold:
+        count: 100
+        intervalSec: 600
+      banDurationSec: 3600
+      conformAction: allow
+      exceedAction: deny(429)
+
+  # ---------- 2000: Geo allowlist ----------
+  - priority: 2000
+    description: "Allow only US/EU/UK/CA/AU/IN/SG; deny others (excluding allowed regions like GB, DE, FR, IT, ES, NL, SE, IE)"
+    match:
+      expr:
+        expression: |
+          !(origin.region_code in [
+            'US','CA','GB','IE','DE','FR','IT','ES','NL','SE','NO','DK','FI','BE','AT','PT','PL','CZ',
+            'AU','NZ','IN','SG','JP'
+          ])
+    action: deny(403)
+
+  # ---------- 3000: Per-IP rate limit (60/min) ----------
+  - priority: 3000
+    description: "Per-IP rate limit: 60 requests / 60s on /api/*"
+    match:
+      expr:
+        expression: "request.path.startsWith('/api/')"
+    action: throttle
+    rateLimitOptions:
+      enforceOnKey: IP
+      rateLimitThreshold:
+        count: 60
+        intervalSec: 60
+      conformAction: allow
+      exceedAction: deny(429)
+
+  # ---------- 3100: Per-IP ban after 10 abuse signals in 1h ----------
+  - priority: 3100
+    description: "Auto-ban: 10 deny-counted signals → 1h ban"
+    match:
+      expr:
+        expression: "request.path.startsWith('/api/')"
+    action: rate_based_ban
+    rateLimitOptions:
+      enforceOnKey: IP
+      rateLimitThreshold:
+        count: 200
+        intervalSec: 60
+      banThreshold:
+        count: 10
+        intervalSec: 3600
+      banDurationSec: 3600
+      conformAction: allow
+      exceedAction: deny(429)
+
+  # ---------- 4000: Bot management challenge on /api/generate ----------
+  - priority: 4000
+    description: "reCAPTCHA Enterprise challenge on POST /api/generate (anonymous tier)"
+    match:
+      expr:
+        expression: |
+          request.method == 'POST' &&
+          request.path == '/api/generate' &&
+          !has(request.headers['authorization'])
+    action: redirect
+    redirectOptions:
+      type: GOOGLE_RECAPTCHA
+      target: "/recaptcha-challenge"
+
+  # ---------- 5000: Block large bodies (defense against memory DoS) ----------
+  - priority: 5000
+    description: "Block requests with body > 64 KiB on JSON endpoints"
+    match:
+      expr:
+        expression: |
+          int(request.headers['content-length']) > 65536 &&
+          !request.path.startsWith('/api/audio/upload')
+    action: deny(413)
+
+  # ---------- 2147483647: Default allow ----------
+  - priority: 2147483647
+    description: "Default allow"
+    match:
+      versionedExpr: SRC_IPS_V1
+      config:
+        srcIpRanges: ["*"]
+    action: allow

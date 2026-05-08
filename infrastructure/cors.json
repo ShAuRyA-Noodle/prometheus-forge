@@ -1,0 +1,40 @@
+[
+  {
+    "origin": [
+      "https://prometheus.app",
+      "https://www.prometheus.app",
+      "https://staging.prometheus.app",
+      "https://prometheus-prod.web.app",
+      "https://prometheus-prod.firebaseapp.com",
+      "https://prometheus-staging.web.app",
+      "http://localhost:5173",
+      "http://localhost:8080",
+      "http://127.0.0.1:5173"
+    ],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Disposition",
+      "Cache-Control",
+      "ETag",
+      "x-goog-resumable",
+      "x-goog-meta-session-id",
+      "x-goog-meta-agent-name"
+    ],
+    "maxAgeSeconds": 3600
+  },
+  {
+    "origin": [
+      "https://prometheus.app",
+      "http://localhost:5173"
+    ],
+    "method": ["PUT", "POST"],
+    "responseHeader": [
+      "Content-Type",
+      "x-goog-resumable",
+      "x-goog-meta-session-id"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

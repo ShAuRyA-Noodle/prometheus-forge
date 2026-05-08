@@ -1,0 +1,146 @@
+# PROMETHEUS V2 — Cloud Scheduler jobs
+# Scheduled HTTP triggers that hit internal worker endpoints.
+# All targets require OIDC auth from scheduler-sa@.
+#
+# Apply each block with:
+#   gcloud scheduler jobs create http <name> --location=us-central1 ...
+
+# =============================================================================
+# JOB 1: Daily retention worker — weekly diff for active companies
+# =============================================================================
+- name: retention-weekly-diff-daily
+  description: "Daily 3 AM UTC: compute weekly retention diffs for all active companies"
+  location: us-central1
+  schedule: "0 3 * * *"            # daily at 03:00 UTC
+  timeZone: "Etc/UTC"
+  attemptDeadline: 600s            # 10 min — fan-out to per-company tasks
+  retryConfig:
+    retryCount: 3
+    minBackoffDuration: 30s
+    maxBackoffDuration: 300s
+    maxDoublings: 3
+  httpTarget:
+    uri: https://prometheus-worker-xxxxx-uc.a.run.app/internal/retention/weekly-diff
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+      X-Scheduler-Job: retention-weekly-diff-daily
+    body: '{"mode":"all_active"}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app
+
+# =============================================================================
+# JOB 2: Weekly cohort digest emails — Monday 9 AM UTC
+# =============================================================================
+- name: cohort-digest-weekly
+  description: "Mondays 9 AM UTC: send cohort progress digest emails to admins"
+  location: us-central1
+  schedule: "0 9 * * 1"            # Mondays at 09:00 UTC
+  timeZone: "Etc/UTC"
+  attemptDeadline: 1800s           # 30 min for big cohorts
+  retryConfig:
+    retryCount: 2
+    minBackoffDuration: 60s
+    maxBackoffDuration: 600s
+  httpTarget:
+    uri: https://prometheus-worker-xxxxx-uc.a.run.app/internal/cohorts/weekly-digest
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+      X-Scheduler-Job: cohort-digest-weekly
+    body: '{}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app
+
+# =============================================================================
+# JOB 3: TTL purge — daily 4 AM UTC
+# Hard-delete sessions and idea_text past 30-day TTL (GDPR floor).
+# =============================================================================
+- name: ttl-purge-daily
+  description: "Daily 4 AM UTC: purge sessions older than 30d (TTL/GDPR)"
+  location: us-central1
+  schedule: "0 4 * * *"
+  timeZone: "Etc/UTC"
+  attemptDeadline: 900s
+  retryConfig:
+    retryCount: 3
+    minBackoffDuration: 60s
+    maxBackoffDuration: 600s
+  httpTarget:
+    uri: https://prometheus-worker-xxxxx-uc.a.run.app/internal/retention/ttl-purge
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+    body: '{"older_than_days": 30}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app
+
+# =============================================================================
+# JOB 4: Domain availability re-check — every 6h for "watched" companies
+# =============================================================================
+- name: domain-watch-recheck
+  description: "Every 6h: re-check Domainr/USPTO availability for watched names"
+  location: us-central1
+  schedule: "0 */6 * * *"
+  timeZone: "Etc/UTC"
+  attemptDeadline: 600s
+  retryConfig:
+    retryCount: 2
+  httpTarget:
+    uri: https://prometheus-worker-xxxxx-uc.a.run.app/internal/watch/recheck
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+    body: '{}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app
+
+# =============================================================================
+# JOB 5: Stripe usage report sync — daily 2 AM UTC
+# Reconciles usage-based metering with Stripe.
+# =============================================================================
+- name: stripe-usage-sync-daily
+  description: "Daily 2 AM UTC: sync usage records to Stripe metered prices"
+  location: us-central1
+  schedule: "0 2 * * *"
+  timeZone: "Etc/UTC"
+  attemptDeadline: 600s
+  retryConfig:
+    retryCount: 5
+    minBackoffDuration: 60s
+    maxBackoffDuration: 1800s
+  httpTarget:
+    uri: https://prometheus-gateway-xxxxx-uc.a.run.app/internal/billing/sync-usage
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+    body: '{}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-gateway-xxxxx-uc.a.run.app
+
+# =============================================================================
+# JOB 6: Daily golden-idea regression — 5 AM UTC
+# Runs 50 golden ideas through pipeline, alerts if quality regresses.
+# =============================================================================
+- name: golden-regression-daily
+  description: "Daily 5 AM UTC: regression test 50 golden ideas, alert on quality drop"
+  location: us-central1
+  schedule: "0 5 * * *"
+  timeZone: "Etc/UTC"
+  attemptDeadline: 1800s
+  retryConfig:
+    retryCount: 1
+  httpTarget:
+    uri: https://prometheus-worker-xxxxx-uc.a.run.app/internal/regression/run-golden
+    httpMethod: POST
+    headers:
+      Content-Type: application/json
+    body: '{"set":"golden-50","alert_on_regression":true}'
+    oidcToken:
+      serviceAccountEmail: scheduler-sa@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app

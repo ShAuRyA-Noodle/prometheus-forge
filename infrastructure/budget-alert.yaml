@@ -1,0 +1,110 @@
+# PROMETHEUS V2 — Cloud Billing budget alert
+# Two thresholds: $500 soft cap (warn), $1000 hard cap (auto-disable APIs).
+#
+# Apply:
+#   gcloud billing budgets create \
+#     --billing-account=$BILLING_ACCOUNT_ID \
+#     --display-name="prometheus-monthly" \
+#     --budget-amount=500USD \
+#     --threshold-rule=percent=50,basis=current-spend \
+#     --threshold-rule=percent=80,basis=current-spend \
+#     --threshold-rule=percent=100,basis=current-spend \
+#     --threshold-rule=percent=200,basis=current-spend \
+#     --notifications-rule-pubsub-topic=projects/prometheus-prod/topics/billing-alerts
+#
+# The $1000 hard cap is enforced by a Cloud Function subscribed to billing-alerts
+# that disables billable APIs when actualSpend / amount >= 2.0.
+
+apiVersion: billing.googleapis.com/v1
+kind: Budget
+
+metadata:
+  name: prometheus-monthly-budget
+  displayName: prometheus-monthly
+  billingAccount: billingAccounts/${BILLING_ACCOUNT_ID}
+
+spec:
+  amount:
+    specifiedAmount:
+      currencyCode: USD
+      units: "500"
+
+  budgetFilter:
+    projects:
+      - projects/prometheus-prod
+    calendarPeriod: MONTH
+    creditTypesTreatment: INCLUDE_ALL_CREDITS
+
+  thresholdRules:
+    - thresholdPercent: 0.5      # 50% — slack notify
+      spendBasis: CURRENT_SPEND
+    - thresholdPercent: 0.8      # 80% — pager notify
+      spendBasis: CURRENT_SPEND
+    - thresholdPercent: 1.0      # 100% — soft cap reached, log + email
+      spendBasis: CURRENT_SPEND
+    - thresholdPercent: 2.0      # 200% = $1000 → HARD CAP, kill APIs
+      spendBasis: CURRENT_SPEND
+
+  notificationsRule:
+    pubsubTopic: projects/prometheus-prod/topics/billing-alerts
+    schemaVersion: "1.0"
+    monitoringNotificationChannels:
+      - projects/prometheus-prod/notificationChannels/SLACK_OPS
+      - projects/prometheus-prod/notificationChannels/PAGERDUTY_PRIMARY
+    disableDefaultIamRecipients: false
+
+---
+
+# === Cloud Function: hard-cap kill switch ===
+# Triggered by billing-alerts Pub/Sub. When costAmount/budgetAmount >= 2.0,
+# disables: aiplatform, generativelanguage, run, firestore, cloudfunctions.
+# Reversible by SRE re-enabling APIs after billing review.
+
+apiVersion: cloudfunctions.googleapis.com/v2
+kind: Function
+
+metadata:
+  name: budget-hardcap-killswitch
+  location: us-central1
+  project: prometheus-prod
+
+spec:
+  buildConfig:
+    runtime: python311
+    entryPoint: handle_billing_alert
+    source:
+      storageSource:
+        bucket: prometheus-prod-functions
+        object: budget-hardcap-killswitch.zip
+
+  serviceConfig:
+    minInstanceCount: 0
+    maxInstanceCount: 1
+    availableMemory: 256M
+    timeoutSeconds: 60
+    serviceAccountEmail: budget-killswitch-sa@prometheus-prod.iam.gserviceaccount.com
+    environmentVariables:
+      PROJECT_ID: prometheus-prod
+      HARD_CAP_RATIO: "2.0"
+      APIS_TO_DISABLE: "aiplatform.googleapis.com,generativelanguage.googleapis.com,run.googleapis.com"
+      SLACK_WEBHOOK_SECRET: SLACK_OPS_WEBHOOK
+
+  eventTrigger:
+    triggerRegion: us-central1
+    eventType: google.cloud.pubsub.topic.v1.messagePublished
+    pubsubTopic: projects/prometheus-prod/topics/billing-alerts
+    retryPolicy: RETRY_POLICY_RETRY
+
+# === Function source (reference — actual code in scripts/budget_killswitch.py) ===
+# import base64, json, os
+# from google.cloud import service_usage_v1
+# def handle_billing_alert(event, context):
+#     payload = json.loads(base64.b64decode(event["data"]).decode("utf-8"))
+#     ratio = float(payload.get("costAmount", 0)) / float(payload.get("budgetAmount", 1))
+#     if ratio < float(os.environ["HARD_CAP_RATIO"]):
+#         return f"ratio={ratio:.2f}, no action"
+#     client = service_usage_v1.ServiceUsageClient()
+#     project = f'projects/{os.environ["PROJECT_ID"]}'
+#     for api in os.environ["APIS_TO_DISABLE"].split(","):
+#         client.disable_service(name=f"{project}/services/{api.strip()}")
+#     return f"DISABLED at ratio={ratio:.2f}"

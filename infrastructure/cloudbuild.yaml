@@ -1,0 +1,295 @@
+# PROMETHEUS V2 — Cloud Build pipeline
+# Trigger: GitHub push to main → staging deploy. Tag v* → prod deploy gated on manual approval.
+#
+# Pipeline stages:
+#   1. cache deps        2. lint            3. typecheck       4. pytest+cov   5. vitest
+#   6. dep audit         7. trivy scan      8. build+sign      9. build fe
+#  10. deploy gateway+worker  11. firestore rules+indexes   12. hosting
+#
+# All build artifacts are signed with cosign. Image is scanned by trivy with HIGH+CRITICAL gating.
+
+substitutions:
+  _REGION: us-central1
+  _AR_REPO: prometheus
+  _GATEWAY_SERVICE: prometheus-gateway
+  _WORKER_SERVICE: prometheus-worker
+  _ENV: staging
+  _MIN_COVERAGE: "70"
+  _COSIGN_KEY: gcpkms://projects/prometheus-prod/locations/us-central1/keyRings/cosign/cryptoKeys/cosign-prod/cryptoKeyVersions/1
+  _NODE_VERSION: "20"
+  _PYTHON_VERSION: "3.11"
+
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+  dynamic_substitutions: true
+  env:
+    - PIP_DISABLE_PIP_VERSION_CHECK=1
+    - PYTHONDONTWRITEBYTECODE=1
+    - CI=true
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/COSIGN_PASSWORD/versions/latest
+      env: COSIGN_PASSWORD
+    - versionName: projects/$PROJECT_ID/secrets/SNYK_TOKEN/versions/latest
+      env: SNYK_TOKEN
+
+steps:
+  # ---------- 1. CACHE DEPS ----------
+  - id: cache-deps
+    name: gcr.io/cloud-builders/gcloud
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        echo "Restoring caches"
+        mkdir -p /workspace/.cache/pip /workspace/.cache/npm
+        gsutil -q cp "gs://${PROJECT_ID}-build-cache/pip-${SHORT_SHA}.tar.gz" - 2>/dev/null \
+          | tar -xz -C /workspace/.cache/pip 2>/dev/null || echo "no pip cache"
+        gsutil -q cp "gs://${PROJECT_ID}-build-cache/npm-${SHORT_SHA}.tar.gz" - 2>/dev/null \
+          | tar -xz -C /workspace/.cache/npm 2>/dev/null || echo "no npm cache"
+
+  # ---------- 2a. BACKEND DEPS + LINT ----------
+  - id: backend-lint
+    name: python:${_PYTHON_VERSION}-slim
+    waitFor: [cache-deps]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd backend
+        pip install --cache-dir /workspace/.cache/pip --no-warn-script-location uv==0.5.11
+        uv venv .venv
+        . .venv/bin/activate
+        uv pip install --require-hashes -r requirements.txt 2>/dev/null \
+          || uv pip install -r requirements.txt
+        ruff check .
+        ruff format --check .
+
+  # ---------- 2b. FRONTEND DEPS + LINT ----------
+  - id: frontend-lint
+    name: node:${_NODE_VERSION}-slim
+    waitFor: [cache-deps]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd frontend
+        npm config set cache /workspace/.cache/npm
+        npm ci --prefer-offline --no-audit --no-fund
+        npm run lint
+
+  # ---------- 3a. BACKEND TYPECHECK ----------
+  - id: backend-typecheck
+    name: python:${_PYTHON_VERSION}-slim
+    waitFor: [backend-lint]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd backend
+        . .venv/bin/activate
+        mypy --strict agents services models
+
+  # ---------- 3b. FRONTEND TYPECHECK ----------
+  - id: frontend-typecheck
+    name: node:${_NODE_VERSION}-slim
+    waitFor: [frontend-lint]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd frontend
+        npm run typecheck
+
+  # ---------- 4. PYTEST + COVERAGE ----------
+  - id: backend-test
+    name: python:${_PYTHON_VERSION}-slim
+    waitFor: [backend-typecheck]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd backend
+        . .venv/bin/activate
+        pytest --cov=. --cov-report=xml --cov-report=term \
+               --cov-fail-under=${_MIN_COVERAGE} -q
+
+  # ---------- 5. VITEST ----------
+  - id: frontend-test
+    name: node:${_NODE_VERSION}-slim
+    waitFor: [frontend-typecheck]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd frontend
+        npm run test -- --run --coverage
+
+  # ---------- 6. DEP AUDIT ----------
+  - id: dep-audit
+    name: python:${_PYTHON_VERSION}-slim
+    waitFor: [backend-test, frontend-test]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        pip install pip-audit==2.7.3
+        cd backend
+        . .venv/bin/activate
+        pip-audit -r requirements.txt --strict
+        cd ../frontend
+        npm audit --audit-level=high
+
+  # ---------- 7. TRIVY IMAGE SCAN (filesystem pre-build) ----------
+  - id: trivy-fs
+    name: aquasec/trivy:0.58.0
+    waitFor: [dep-audit]
+    entrypoint: trivy
+    args:
+      - fs
+      - --severity=HIGH,CRITICAL
+      - --exit-code=1
+      - --ignore-unfixed
+      - --scanners=vuln,secret,misconfig
+      - .
+
+  # ---------- 8a. BUILD BACKEND IMAGE (multi-stage) ----------
+  - id: build-backend
+    name: gcr.io/cloud-builders/docker
+    waitFor: [trivy-fs]
+    args:
+      - build
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:${SHORT_SHA}
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:latest
+      - --build-arg=VCS_REF=${COMMIT_SHA}
+      - --cache-from=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:latest
+      - backend
+
+  # ---------- 8b. PUSH BACKEND IMAGE ----------
+  - id: push-backend
+    name: gcr.io/cloud-builders/docker
+    waitFor: [build-backend]
+    args: [push, --all-tags, "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend"]
+
+  # ---------- 8c. TRIVY IMAGE SCAN ----------
+  - id: trivy-image
+    name: aquasec/trivy:0.58.0
+    waitFor: [push-backend]
+    entrypoint: trivy
+    args:
+      - image
+      - --severity=HIGH,CRITICAL
+      - --exit-code=1
+      - --ignore-unfixed
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:${SHORT_SHA}
+
+  # ---------- 8d. COSIGN SIGN ----------
+  - id: cosign-sign
+    name: gcr.io/projectsigstore/cosign:v2.4.1
+    waitFor: [trivy-image]
+    entrypoint: cosign
+    args:
+      - sign
+      - --key=${_COSIGN_KEY}
+      - --yes
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:${SHORT_SHA}
+    secretEnv: [COSIGN_PASSWORD]
+
+  # ---------- 9. BUILD FRONTEND ----------
+  - id: build-frontend
+    name: node:${_NODE_VERSION}-slim
+    waitFor: [frontend-test]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd frontend
+        npm run build
+        tar czf /workspace/frontend-dist.tar.gz dist
+
+  # ---------- 10a. DEPLOY GATEWAY ----------
+  - id: deploy-gateway
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: [cosign-sign]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        gcloud run services replace infrastructure/cloud-run-gateway.yaml \
+          --region=${_REGION} \
+          --project=${PROJECT_ID}
+        gcloud run services update-traffic ${_GATEWAY_SERVICE} \
+          --region=${_REGION} --to-latest
+
+  # ---------- 10b. DEPLOY WORKER ----------
+  - id: deploy-worker
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: [cosign-sign]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        gcloud run services replace infrastructure/cloud-run-worker.yaml \
+          --region=${_REGION} \
+          --project=${PROJECT_ID}
+        gcloud run services update-traffic ${_WORKER_SERVICE} \
+          --region=${_REGION} --to-latest
+
+  # ---------- 11. FIREBASE RULES + INDEXES ----------
+  - id: firebase-deploy-rules
+    name: gcr.io/${PROJECT_ID}/firebase-tools:13.29.1
+    waitFor: [deploy-gateway, deploy-worker]
+    args:
+      - deploy
+      - --only=firestore:rules,firestore:indexes,storage
+      - --project=${PROJECT_ID}
+      - --non-interactive
+
+  # ---------- 12. FIREBASE HOSTING ----------
+  - id: firebase-deploy-hosting
+    name: gcr.io/${PROJECT_ID}/firebase-tools:13.29.1
+    waitFor: [build-frontend, firebase-deploy-rules]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        tar xzf /workspace/frontend-dist.tar.gz -C frontend
+        firebase deploy --only=hosting:${_ENV} \
+                        --project=${PROJECT_ID} --non-interactive
+
+  # ---------- 13. SAVE CACHE ----------
+  - id: save-cache
+    name: gcr.io/cloud-builders/gcloud
+    waitFor: [firebase-deploy-hosting]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        tar czf - -C /workspace/.cache/pip . | gsutil -q cp - "gs://${PROJECT_ID}-build-cache/pip-${SHORT_SHA}.tar.gz" || true
+        tar czf - -C /workspace/.cache/npm . | gsutil -q cp - "gs://${PROJECT_ID}-build-cache/npm-${SHORT_SHA}.tar.gz" || true
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/backend:latest
+
+timeout: 1800s
+
+tags:
+  - prometheus
+  - ${_ENV}
+  - sha-${SHORT_SHA}

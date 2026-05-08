@@ -1,0 +1,172 @@
+rules_version = '2';
+
+// PROMETHEUS V2 — Firestore Production Rules
+// Threat model: any authenticated user can attempt to read/write any doc.
+// Defense: every collection scoped by owner_uid (verified Firebase Auth uid)
+// or by cohort_id membership. Backend service account is the ONLY writer
+// for agent_outputs and cost telemetry — clients can read their own, never write.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPERS ====================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    // Backend uses Firebase custom tokens minted from a server SA.
+    // Custom tokens carry sign_in_provider == "custom".
+    function isBackend() {
+      return isSignedIn()
+        && request.auth.token.firebase.sign_in_provider == "custom";
+    }
+    function isCohortAdmin(cohortId) {
+      return isSignedIn()
+        && cohortId != null
+        && request.auth.token.cohort_admin_for is list
+        && cohortId in request.auth.token.cohort_admin_for;
+    }
+    function isInCohort(cohortId) {
+      return isSignedIn()
+        && cohortId != null
+        && request.auth.token.cohort_id == cohortId;
+    }
+    function notMutating(field) {
+      return !(field in request.resource.data)
+        || request.resource.data[field] == resource.data[field];
+    }
+
+    // ==================== USERS ====================
+    // Each user owns exactly one /users/{uid} doc.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isBackend();
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.created_at == request.time;
+      allow update: if isOwner(uid)
+        && notMutating('uid')
+        && notMutating('created_at')
+        && notMutating('plan')          // plan changes via Stripe webhook (backend only)
+        && notMutating('cohort_id');    // cohort assigned by admin (backend only)
+      allow delete: if false;            // GDPR delete via backend hard-delete script
+    }
+
+    // ==================== COMPANIES ====================
+    // /companies/{company_id} — long-lived workspace per startup.
+    match /companies/{companyId} {
+      allow read: if isOwner(resource.data.owner_uid)
+        || isBackend()
+        || isCohortAdmin(resource.data.cohort_id);
+      allow create: if isOwner(request.resource.data.owner_uid)
+        && request.resource.data.created_at == request.time;
+      allow update: if isOwner(resource.data.owner_uid)
+        && notMutating('owner_uid')
+        && notMutating('created_at');
+      allow delete: if isOwner(resource.data.owner_uid);
+
+      // ==================== BRANCHES ====================
+      // /companies/{cid}/branches/{branch_id}
+      match /branches/{branchId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/companies/$(companyId)).data.owner_uid)
+          || isBackend()
+          || isCohortAdmin(get(/databases/$(database)/documents/companies/$(companyId)).data.cohort_id);
+        allow create, update: if isOwner(get(/databases/$(database)/documents/companies/$(companyId)).data.owner_uid);
+        allow delete: if isOwner(get(/databases/$(database)/documents/companies/$(companyId)).data.owner_uid);
+      }
+    }
+
+    // ==================== SESSIONS ====================
+    // /sessions/{session_id} — one pipeline run.
+    match /sessions/{sessionId} {
+      allow read: if isOwner(resource.data.user_uid)
+        || isBackend()
+        || isCohortAdmin(resource.data.cohort_id);
+
+      // Client may create only with idea_text, idempotency_key, etc.
+      // Status fields are backend-controlled.
+      allow create: if isOwner(request.resource.data.user_uid)
+        && request.resource.data.status == 'queued'
+        && request.resource.data.created_at == request.time
+        && request.resource.data.idempotency_key is string
+        && request.resource.data.idea_text.size() <= 2000;
+
+      // Owner may cancel; backend writes everything else.
+      allow update: if (
+        isOwner(resource.data.user_uid)
+        && request.resource.data.status == 'canceled'
+        && notMutating('user_uid')
+        && notMutating('created_at')
+        && notMutating('idempotency_key')
+        && notMutating('idea_text_hash')
+      ) || isBackend();
+
+      allow delete: if isBackend();   // TTL purge / GDPR delete
+
+      // ==================== AGENT OUTPUTS ====================
+      // /sessions/{sid}/agent_outputs/{agent_name}
+      // Read by session owner; write only by backend.
+      match /agent_outputs/{agentName} {
+        allow read: if isOwner(get(/databases/$(database)/documents/sessions/$(sessionId)).data.user_uid)
+          || isBackend()
+          || isCohortAdmin(get(/databases/$(database)/documents/sessions/$(sessionId)).data.cohort_id);
+        allow write: if isBackend();
+      }
+
+      // ==================== AGENT EVENTS (SSE replay log) ====================
+      match /agent_events/{eventId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/sessions/$(sessionId)).data.user_uid)
+          || isBackend();
+        allow write: if isBackend();
+      }
+    }
+
+    // ==================== MARKETPLACE JOBS ====================
+    // /marketplace_jobs/{job_id} — designer/lawyer/dev marketplace
+    match /marketplace_jobs/{jobId} {
+      // Owner sees their own. Vendors see jobs they've claimed.
+      allow read: if isOwner(resource.data.owner_uid)
+        || (isSignedIn() && request.auth.uid == resource.data.claimed_by_uid)
+        || isBackend();
+      allow create: if isOwner(request.resource.data.owner_uid)
+        && request.resource.data.status == 'open'
+        && request.resource.data.created_at == request.time;
+      allow update: if (
+        isOwner(resource.data.owner_uid)
+        && notMutating('owner_uid')
+        && notMutating('created_at')
+      ) || isBackend();
+      allow delete: if isBackend();
+    }
+
+    // ==================== COHORTS ====================
+    match /cohorts/{cohortId} {
+      allow read: if isInCohort(cohortId) || isCohortAdmin(cohortId) || isBackend();
+      allow write: if isBackend();
+    }
+
+    // ==================== IDEMPOTENCY KEYS ====================
+    // Backend-only collection used to deduplicate POST /api/generate.
+    match /idempotency/{key} {
+      allow read, write: if isBackend();
+    }
+
+    // ==================== STRIPE WEBHOOK EVENTS ====================
+    match /stripe_events/{eventId} {
+      allow read, write: if isBackend();
+    }
+
+    // ==================== AUDIT LOG ====================
+    match /audit_log/{entryId} {
+      allow read: if isBackend();
+      allow write: if isBackend();
+    }
+
+    // ==================== DEFAULT DENY ====================
+    // Anything not explicitly matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

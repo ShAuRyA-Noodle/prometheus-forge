@@ -1,0 +1,51 @@
+# Secrets & local env
+.env
+.env.*
+*.pem
+*.key
+service-account*.json
+gcloud_*.json
+
+# Dev tooling
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+.editorconfig
+
+# Python ephemera
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.tox/
+.nox/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Tests + golden data should not ship in runtime image
+tests/
+
+# Docs & site
+*.md
+!CLAUDE.md
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Build artefacts
+dist/
+build/
+*.log

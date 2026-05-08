@@ -1,0 +1,82 @@
+# PROMETHEUS V2 — Cloud Tasks queue config
+# Apply with:
+#   gcloud tasks queues create prometheus-pipeline \
+#     --location=us-central1 \
+#     --max-attempts=3 --max-backoff=60s --min-backoff=2s \
+#     --max-doublings=4 --max-concurrent-dispatches=20 \
+#     --max-dispatches-per-second=5
+#
+# Or with config-based update:
+#   gcloud tasks queues update prometheus-pipeline \
+#     --location=us-central1 \
+#     --max-attempts=3 ...
+#
+# This file is the canonical declaration; CI parses it.
+
+apiVersion: cloud.google.com/v1
+kind: TaskQueue
+
+metadata:
+  name: prometheus-pipeline
+  location: us-central1
+  project: prometheus-prod
+
+spec:
+  # === Rate limiting ===
+  rateLimits:
+    maxConcurrentDispatches: 20      # 20 pipelines running in parallel max
+    maxDispatchesPerSecond: 5        # smooth bursts
+    maxBurstSize: 10
+
+  # === Retry config (exponential backoff) ===
+  retryConfig:
+    maxAttempts: 3                   # one initial + 2 retries
+    minBackoff: 2s
+    maxBackoff: 60s
+    maxDoublings: 4                  # 2s -> 4s -> 8s -> 16s -> 32s -> 60s cap
+    maxRetryDuration: 600s           # give up after 10 min total
+
+  # === Stackdriver / observability ===
+  stackdriverLoggingConfig:
+    samplingRatio: 1.0               # log every dispatch in prod for first 90 days
+
+  # === HTTP target (Cloud Run worker) ===
+  httpTarget:
+    uriOverride:
+      scheme: HTTPS
+      host: prometheus-worker-xxxxx-uc.a.run.app
+      pathOverride:
+        path: /internal/run
+    httpMethod: POST
+    headerOverrides:
+      - header:
+          key: Content-Type
+          value: application/json
+    oidcToken:
+      serviceAccountEmail: tasks-invoker@prometheus-prod.iam.gserviceaccount.com
+      audience: https://prometheus-worker-xxxxx-uc.a.run.app
+
+---
+
+# === Secondary queue for retention/maintenance jobs ===
+apiVersion: cloud.google.com/v1
+kind: TaskQueue
+
+metadata:
+  name: prometheus-maintenance
+  location: us-central1
+  project: prometheus-prod
+
+spec:
+  rateLimits:
+    maxConcurrentDispatches: 5
+    maxDispatchesPerSecond: 1
+    maxBurstSize: 3
+  retryConfig:
+    maxAttempts: 5
+    minBackoff: 30s
+    maxBackoff: 600s
+    maxDoublings: 5
+    maxRetryDuration: 7200s
+  stackdriverLoggingConfig:
+    samplingRatio: 1.0
