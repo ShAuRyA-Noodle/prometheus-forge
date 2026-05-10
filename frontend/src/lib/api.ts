@@ -123,6 +123,51 @@ const ShareLinkResponseSchema = z.object({
 });
 export type ShareLinkResponse = z.infer<typeof ShareLinkResponseSchema>;
 
+const DomainCheckResponseSchema = z.object({
+  domain: z.string(),
+  available: z.boolean(),
+  premium: z.boolean().default(false),
+  price_usd: z.number().nullable().optional(),
+  registrar: z.string().nullable().optional(),
+});
+export type DomainCheckResponse = z.infer<typeof DomainCheckResponseSchema>;
+
+const HandleCheckResponseSchema = z.object({
+  platform: z.enum(["x", "instagram", "github", "tiktok"]),
+  handle: z.string(),
+  available: z.boolean().nullable(),
+});
+export type HandleCheckResponse = z.infer<typeof HandleCheckResponseSchema>;
+
+const USPTOCheckResponseSchema = z.object({
+  name: z.string(),
+  conflicts: z.array(z.object({
+    serial_number: z.string(),
+    mark: z.string(),
+    status: z.string(),
+    filing_date: z.string().nullable().optional(),
+  })).default([]),
+});
+export type USPTOCheckResponse = z.infer<typeof USPTOCheckResponseSchema>;
+
+const ImageRegenResponseSchema = z.object({
+  image_url: z.string().url(),
+  prompt_used: z.string().nullable().optional(),
+});
+export type ImageRegenResponse = z.infer<typeof ImageRegenResponseSchema>;
+
+const AvailabilityBundleSchema = z.object({
+  name: z.string(),
+  domain_com: DomainCheckResponseSchema.nullable().optional(),
+  domain_ai: DomainCheckResponseSchema.nullable().optional(),
+  domain_app: DomainCheckResponseSchema.nullable().optional(),
+  uspto: USPTOCheckResponseSchema.nullable().optional(),
+  handle_x: HandleCheckResponseSchema.nullable().optional(),
+  handle_instagram: HandleCheckResponseSchema.nullable().optional(),
+  handle_github: HandleCheckResponseSchema.nullable().optional(),
+});
+export type AvailabilityBundle = z.infer<typeof AvailabilityBundleSchema>;
+
 const CheckoutResponseSchema = z.object({
   url: z.string().url(),
   session_id: z.string(),
@@ -402,5 +447,59 @@ export const api = {
       { method: "POST", body: { session_id: sessionId } },
     );
     return res.token;
+  },
+
+  /** GET /api/availability/domain?domain=foo.com — Domainr/Cloudflare lookup. */
+  async checkDomain(domain: string, signal?: AbortSignal): Promise<DomainCheckResponse> {
+    return request(
+      `/availability/domain?domain=${encodeURIComponent(domain)}`,
+      DomainCheckResponseSchema,
+      { signal },
+    );
+  },
+
+  /** GET /api/availability/uspto?name=foo — USPTO TESS lookup. */
+  async checkUSPTO(name: string, signal?: AbortSignal): Promise<USPTOCheckResponse> {
+    return request(
+      `/availability/uspto?name=${encodeURIComponent(name)}`,
+      USPTOCheckResponseSchema,
+      { signal },
+    );
+  },
+
+  /** GET /api/availability/handle?platform=x&handle=foo — social handle lookup. */
+  async checkHandle(
+    platform: "x" | "instagram" | "github" | "tiktok",
+    handle: string,
+    signal?: AbortSignal,
+  ): Promise<HandleCheckResponse> {
+    return request(
+      `/availability/handle?platform=${platform}&handle=${encodeURIComponent(handle)}`,
+      HandleCheckResponseSchema,
+      { signal },
+    );
+  },
+
+  /** POST /api/availability/bundle — fan out checks for one candidate name. */
+  async checkAvailability(name: string, signal?: AbortSignal): Promise<AvailabilityBundle> {
+    return request(
+      "/availability/bundle",
+      AvailabilityBundleSchema,
+      { method: "POST", body: { name }, signal },
+    );
+  },
+
+  /** POST /api/imagen/regenerate — Imagen call for landing/brand asset slots. */
+  async regenerateImage(req: {
+    session_id: string;
+    target: "hero" | "feature" | "logo" | "slide";
+    target_id?: string;
+    steering?: string;
+  }): Promise<ImageRegenResponse> {
+    return request(
+      "/imagen/regenerate",
+      ImageRegenResponseSchema,
+      { method: "POST", body: req },
+    );
   },
 };

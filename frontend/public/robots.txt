@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /share/
+Disallow: /api/
+Disallow: /generate/
+Disallow: /results/
+Disallow: /companies/
+Disallow: /billing
+Disallow: /settings
+Disallow: /cohort/
+
+Sitemap: https://prometheus.app/sitemap.xml

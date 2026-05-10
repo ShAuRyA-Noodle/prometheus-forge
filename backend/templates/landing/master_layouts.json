@@ -1,0 +1,112 @@
+{
+  "$schema": "https://prometheus.app/schemas/landing-master-layouts-v1.json",
+  "version": 1,
+  "description": "Pre-designed Tailwind-class landing-page layouts. The Landing Page Agent picks one based on industry + product_type, then fills the placeholders. Layout HTML lives next to this file in master_layouts.html.",
+  "layouts": {
+    "A": {
+      "label": "hero-asymmetric",
+      "purpose": "SaaS / dev tools. Image right, copy left, big CTA, bento features, pricing table, FAQ.",
+      "sections": ["hero", "logo_strip", "bento_features", "pricing", "faq", "footer"],
+      "image_slots": {
+        "hero": {"aspect_ratio": "16:9", "placement": "right"},
+        "feature_1": {"aspect_ratio": "1:1"},
+        "feature_2": {"aspect_ratio": "4:3"}
+      },
+      "color_priority": ["primary", "accent", "background", "text"]
+    },
+    "B": {
+      "label": "centered-hero",
+      "purpose": "Consumer / lifestyle. Centered hero, full-width testimonial carousel, feature timeline, CTA card.",
+      "sections": ["hero_centered", "stats_band", "testimonials", "feature_timeline", "cta_card", "footer"],
+      "image_slots": {
+        "hero": {"aspect_ratio": "21:9", "placement": "background"},
+        "testimonial_avatars": {"aspect_ratio": "1:1", "count": 3}
+      },
+      "color_priority": ["background", "primary", "accent", "text"]
+    },
+    "C": {
+      "label": "split-hero",
+      "purpose": "Marketplace / multi-sided. 50/50 split with brand pattern, feature grid (4 items, asymmetric sizes), social proof logos, pricing.",
+      "sections": ["split_hero", "logo_strip", "feature_grid_4", "pricing", "footer"],
+      "image_slots": {
+        "hero_left": {"aspect_ratio": "1:1"},
+        "feature_1": {"aspect_ratio": "1:1"},
+        "feature_2": {"aspect_ratio": "16:9"},
+        "feature_3": {"aspect_ratio": "1:1"},
+        "feature_4": {"aspect_ratio": "16:9"}
+      },
+      "color_priority": ["primary", "accent", "background", "text"]
+    }
+  },
+  "industry_defaults": {
+    "saas": "A",
+    "developer_tools": "A",
+    "enterprise_saas": "A",
+    "ai_ml": "A",
+    "fintech": "A",
+    "healthtech": "B",
+    "edtech": "B",
+    "social": "B",
+    "entertainment": "B",
+    "consumer_hardware": "B",
+    "sustainability": "B",
+    "marketplace": "C",
+    "ecommerce": "C",
+    "logistics": "C",
+    "other": "A"
+  },
+  "required_brand_fields": [
+    "company_name",
+    "tagline",
+    "color_palette",
+    "typography",
+    "brand_voice_traits"
+  ],
+  "required_business_fields": [
+    "pricing_tiers",
+    "primary_revenue_stream"
+  ],
+  "placeholders": [
+    "{{COMPANY_NAME}}",
+    "{{TAGLINE}}",
+    "{{HEADING_FONT}}",
+    "{{BODY_FONT}}",
+    "{{COLOR_PRIMARY}}",
+    "{{COLOR_ACCENT}}",
+    "{{COLOR_BG}}",
+    "{{COLOR_FG}}",
+    "{{COLOR_MUTED}}",
+    "{{HERO_IMAGE_URL}}",
+    "{{HERO_HEADLINE}}",
+    "{{HERO_SUBHEAD}}",
+    "{{CTA_TEXT}}",
+    "{{CTA_HREF}}",
+    "{{SECONDARY_CTA_TEXT}}",
+    "{{SECONDARY_CTA_HREF}}",
+    "{{FEATURE_1_TITLE}}",
+    "{{FEATURE_1_BODY}}",
+    "{{FEATURE_1_IMAGE}}",
+    "{{FEATURE_2_TITLE}}",
+    "{{FEATURE_2_BODY}}",
+    "{{FEATURE_2_IMAGE}}",
+    "{{FEATURE_3_TITLE}}",
+    "{{FEATURE_3_BODY}}",
+    "{{FEATURE_3_IMAGE}}",
+    "{{FEATURE_4_TITLE}}",
+    "{{FEATURE_4_BODY}}",
+    "{{FEATURE_4_IMAGE}}",
+    "{{TIER_1_NAME}}",
+    "{{TIER_1_PRICE}}",
+    "{{TIER_1_FEATURES}}",
+    "{{TIER_2_NAME}}",
+    "{{TIER_2_PRICE}}",
+    "{{TIER_2_FEATURES}}",
+    "{{TIER_3_NAME}}",
+    "{{TIER_3_PRICE}}",
+    "{{TIER_3_FEATURES}}",
+    "{{FAQ_BLOCK}}",
+    "{{FOOTER_LINKS}}",
+    "{{LOGO_STRIP}}",
+    "{{TESTIMONIALS}}"
+  ]
+}

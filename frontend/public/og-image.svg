@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="PROMETHEUS — Whisper an idea. Get a company.">
+  <defs>
+    <radialGradient id="glow" cx="22%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="#FF5A1F" stop-opacity="0.32"/>
+      <stop offset="60%" stop-color="#FF5A1F" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#09090B" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="grid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#27272A" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#09090B" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#09090B"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <g stroke="#27272A" stroke-width="1" opacity="0.45">
+    <path d="M0 158 H1200"/>
+    <path d="M0 316 H1200"/>
+    <path d="M0 474 H1200"/>
+    <path d="M300 0 V630"/>
+    <path d="M600 0 V630"/>
+    <path d="M900 0 V630"/>
+  </g>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.3"/>
+
+  <g transform="translate(96 152)">
+    <g transform="translate(0 0)">
+      <rect width="40" height="40" rx="10" fill="#0F0F11"/>
+      <path d="M20 6c1.6 4 4.6 5.7 4.6 10.2 0 2.8-2.2 4.6-4.6 4.6-2.1 0-3.6-1.5-3.6-3.4 0-1.5.8-2.5 1.8-3.4-1.5 5.3 3.1 5.5 3.1 2.8 0-2.2-2.1-4.1-1.3-10.8zM12 21.7c.9 2.8 3.7 4.5 7.5 4.5s6.6-1.7 7.5-4.5c1.5 2.7 2.2 5.3 2.2 7.7 0 5.2-4.3 8.7-9.6 8.7s-9.6-3.5-9.6-8.7c0-2.4.7-5 2.2-7.7z" fill="#FF5A1F"/>
+    </g>
+    <text x="56" y="28" fill="#A1A1AA" font-family="Geist, sans-serif" font-size="20" font-weight="600" letter-spacing="6">PROMETHEUS</text>
+  </g>
+
+  <text x="96" y="320" fill="#FAFAFA" font-family="Cabinet Grotesk, sans-serif" font-size="92" font-weight="700" letter-spacing="-3">Whisper an idea.</text>
+  <text x="96" y="416" fill="#71717A" font-family="Cabinet Grotesk, sans-serif" font-size="92" font-weight="500" letter-spacing="-3">Get a company.</text>
+
+  <g transform="translate(96 478)">
+    <rect width="14" height="14" rx="7" fill="#FF5A1F"/>
+    <text x="28" y="12" fill="#A1A1AA" font-family="Geist, sans-serif" font-size="20">12 agents · ~75-120 seconds · cited sources</text>
+  </g>
+
+  <g transform="translate(96 530)" font-family="Geist Mono, monospace" font-size="14" fill="#52525B">
+    <text x="0" y="0">brand · deck · model · landing · legal · gtm · risk · tech · summary</text>
+  </g>
+</svg>

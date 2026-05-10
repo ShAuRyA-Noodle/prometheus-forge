@@ -1,0 +1,95 @@
+# PROMETHEUS pre-commit hooks
+# Run: pre-commit install && pre-commit run --all-files
+
+repos:
+  # ─── Generic hygiene ──────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # ─── Secret scan ──────────────────────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+
+  # ─── Python: ruff (lint+format) + mypy ────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        files: ^backend/(agents|services|models)/.*\.py$
+        args: ["--strict", "--ignore-missing-imports"]
+        additional_dependencies:
+          - pydantic>=2.7
+          - structlog
+          - types-requests
+
+  # ─── Frontend: eslint + prettier ──────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npx --no-install eslint --max-warnings 0'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: true
+
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd frontend && npx --no-install prettier --check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|css|md|json)$
+        pass_filenames: true
+
+  # ─── Pytest quick on changed files ────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: pytest-quick
+        name: pytest-quick
+        entry: bash -c 'cd backend && python -m pytest -q -x --no-header --tb=short -k "not chaos and not security and not golden and not fuzz"'
+        language: system
+        pass_filenames: false
+        stages: [commit]
+        files: ^backend/.*\.py$
+
+  # ─── PROMETHEUS-specific scanners ─────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: anti-slop
+        name: PROMETHEUS anti-slop scanner
+        entry: python tools/check_anti_slop.py
+        language: system
+        types: [text]
+        pass_filenames: true
+
+      - id: drive-scope-check
+        name: drive-scope check (drive.file only)
+        entry: python tools/check_drive_scope.py
+        language: system
+        types: [python]
+        files: ^backend/.*\.py$
+        pass_filenames: true
+
+      - id: iframe-sandbox-check
+        name: iframe sandbox check (no allow-scripts)
+        entry: python tools/check_iframe_sandbox.py
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: true

@@ -1,0 +1,50 @@
+# PROMETHEUS — Code owners
+# Format: <pattern>  <owner1> <owner2>
+# Default: @ShAuRyA-Noodle
+
+*                                       @ShAuRyA-Noodle
+
+# Critical paths require additional review
+
+# Orchestration + gates — protocol-level changes
+/backend/agents/orchestrator.py         @ShAuRyA-Noodle
+/backend/agents/gates.py                @ShAuRyA-Noodle
+/backend/agents/base.py                 @ShAuRyA-Noodle
+/backend/agents/_summarize.py           @ShAuRyA-Noodle
+
+# Schemas — single source of truth
+/backend/models/agent_schemas.py        @ShAuRyA-Noodle
+/backend/models/session_models.py       @ShAuRyA-Noodle
+/backend/models/request_models.py       @ShAuRyA-Noodle
+
+# Security-critical
+/backend/middleware/                    @ShAuRyA-Noodle
+/backend/services/sanitization.py       @ShAuRyA-Noodle
+/backend/services/vertex_safety.py      @ShAuRyA-Noodle
+/backend/services/legal_template_service.py @ShAuRyA-Noodle
+/backend/services/finance_engine.py     @ShAuRyA-Noodle
+/backend/services/workspace_oauth.py    @ShAuRyA-Noodle
+/backend/services/share_token_service.py @ShAuRyA-Noodle
+/backend/services/secret_rotator.py     @ShAuRyA-Noodle
+/frontend/src/lib/purify.ts             @ShAuRyA-Noodle
+/frontend/src/components/Sandbox/       @ShAuRyA-Noodle
+
+# Infrastructure
+/infrastructure/                        @ShAuRyA-Noodle
+/cloud_functions/                       @ShAuRyA-Noodle
+/.github/                               @ShAuRyA-Noodle
+/scripts/deploy.sh                      @ShAuRyA-Noodle
+/scripts/rotate-keys.sh                 @ShAuRyA-Noodle
+
+# Prompts — bumps require regression
+/backend/prompts/                       @ShAuRyA-Noodle
+/docs/PROMPT_REGISTRY.md                @ShAuRyA-Noodle
+
+# Docs that govern process
+/CLAUDE.md                              @ShAuRyA-Noodle
+/PROMETHEUS_BLUEPRINT_V2.md             @ShAuRyA-Noodle
+/PROMETHEUS_ROADMAP.md                  @ShAuRyA-Noodle
+/docs/SECURITY.md                       @ShAuRyA-Noodle
+/docs/RUNBOOK.md                        @ShAuRyA-Noodle
+/docs/ARCHITECTURE.md                   @ShAuRyA-Noodle
+/docs/DEPLOYMENT.md                     @ShAuRyA-Noodle

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="PROMETHEUS">
+  <defs>
+    <radialGradient id="iconGlow" cx="38%" cy="32%" r="60%">
+      <stop offset="0%" stop-color="#FF5A1F" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#09090B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#09090B"/>
+  <rect width="512" height="512" rx="112" fill="url(#iconGlow)"/>
+  <g transform="translate(128 64)">
+    <path
+      d="M128 0c10.4 26.8 29.6 37.6 29.6 66.8 0 18-14 30-29.6 30-13.6 0-23.6-9.6-23.6-22.4 0-9.6 5.6-16 12-22-9.6 34.4 20 36 20 18.4 0-14.4-14-26.8-8.4-70.8zM80 134.6c5.6 18.4 24 29.6 48 29.6s42.4-11.2 48-29.6c9.6 17.6 14 34.4 14 50 0 33.6-27.6 56.4-62 56.4S66 218.2 66 184.6c0-15.6 4.4-32.4 14-50z"
+      fill="#FF5A1F"
+    />
+  </g>
+</svg>

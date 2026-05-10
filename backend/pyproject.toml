@@ -40,5 +40,9 @@ addopts = "-ra -q --strict-markers --cov=. --cov-report=term-missing"
 markers = [
     "integration: hits real APIs, gated by RUN_INTEGRATION=1",
     "slow: long-running tests",
-    "golden: golden idea regression"
+    "golden: golden idea regression",
+    "security: prompt-injection / abuse / sanitization regression",
+    "chaos: failure-injection tests",
+    "abuse: adversarial / DoS tests",
+    "fuzz: hypothesis fuzz tests"
 ]

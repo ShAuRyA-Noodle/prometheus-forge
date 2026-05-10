@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://prometheus.app/.well-known/security.txt
+    about: For active security vulnerabilities, email security@prometheus.app — DO NOT file a public issue.
+  - name: Bug bounty (HackerOne)
+    url: https://hackerone.com/prometheus
+    about: Public security disclosure program with payouts up to $15,000 (Critical).
+  - name: Discussions
+    url: https://github.com/ShAuRyA-Noodle/prometheus/discussions
+    about: For design proposals, RFCs, and open-ended product questions.
+  - name: Status page
+    url: https://status.prometheus.app
+    about: Live status. Check here before filing an outage bug.

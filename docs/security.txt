@@ -1,0 +1,53 @@
+# Security policy for prometheus.app
+# Published at https://prometheus.app/.well-known/security.txt
+# Per RFC 9116
+
+Contact: mailto:security@prometheus.app
+Contact: https://hackerone.com/prometheus
+Expires: 2027-05-11T00:00:00.000Z
+Encryption: https://prometheus.app/security/pgp.txt
+Acknowledgments: https://prometheus.app/security/hall-of-fame
+Preferred-Languages: en
+Canonical: https://prometheus.app/.well-known/security.txt
+Policy: https://prometheus.app/security/policy
+
+# Scope (in)
+# - *.prometheus.app endpoints (gateway + worker + landing)
+# - Firebase Auth + Firestore data access patterns
+# - Stripe webhook handlers
+# - OAuth scope claims (drive.file)
+# - Generated landing pages served via Cloudflare Pages
+# - Cloud Run services (gateway, worker)
+# - IAM role assumption paths
+
+# Scope (out)
+# - Third-party APIs (USPTO, Domainr, Crunchbase, Stripe, Cloudflare, Workspace)
+# - DDoS testing without prior coordination
+# - Social engineering of staff
+# - Physical security
+# - Vendor-side OAuth provider compromise (Google itself)
+
+# Severity payouts (USD)
+# - Critical (RCE, auth bypass, mass data exfil, full ATO): $5,000 - $15,000
+# - High (IDOR with PII, privilege escalation, billing manipulation, OAuth scope escalation): $1,500 - $5,000
+# - Medium (stored XSS, CSRF on critical action, info disclosure): $300 - $1,500
+# - Low (reflected XSS in low-traffic surface, security best-practice): $50 - $300
+
+# Out of scope (won't pay)
+# - Self-XSS (requires victim to paste malicious payload)
+# - DoS / volumetric attacks (we test these internally)
+# - Findings only reproducible in disabled features behind a feature flag we haven't shipped
+# - Theoretical issues without a working PoC
+# - Missing security headers on non-critical surfaces (e.g., status page)
+# - SPF/DKIM/DMARC reports without practical impact
+# - Username enumeration on signup
+
+# Disclosure
+# - Standard: 90-day window
+# - Critical: ack within 24h, fix within 7d
+# - High: ack within 24h, fix within 30d
+# - Bonus payout for accepting a 30-day extension when complexity warrants
+
+# Hall of fame
+# - Researchers acknowledged at https://prometheus.app/security/hall-of-fame
+# - Optional CVE issuance for novel findings

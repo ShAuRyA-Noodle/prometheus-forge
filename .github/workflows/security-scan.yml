@@ -1,0 +1,106 @@
+name: Security scan
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # daily 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  security-events: write
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit
+        id: pip
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt --format=json --output=pip-audit.json || echo "AUDIT_FAILED=true" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: pip-audit-report, path: pip-audit.json, retention-days: 30 }
+      - name: Open issue on findings
+        if: env.AUDIT_FAILED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('pip-audit.json', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `[security] pip-audit findings on ${new Date().toISOString().slice(0,10)}`,
+              labels: ['security', 'dependencies'],
+              body: `\`\`\`json\n${report}\n\`\`\``
+            });
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: npm audit
+        id: npm
+        run: |
+          cd frontend
+          npm ci
+          npm audit --audit-level=high --json > ../npm-audit.json || echo "AUDIT_FAILED=true" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: npm-audit-report, path: npm-audit.json, retention-days: 30 }
+      - name: Open issue on findings
+        if: env.AUDIT_FAILED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('npm-audit.json', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `[security] npm audit findings on ${new Date().toISOString().slice(0,10)}`,
+              labels: ['security', 'dependencies'],
+              body: `\`\`\`json\n${report}\n\`\`\``
+            });
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep ci --config=p/owasp-top-ten --config=p/python --config=p/typescript --error
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: '.'
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-fs.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

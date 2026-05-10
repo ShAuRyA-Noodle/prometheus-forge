@@ -1,0 +1,215 @@
+{
+  "$schema": "https://prometheus.app/schemas/slides-master-template-v1.json",
+  "version": 1,
+  "template_drive_id": "to-be-created-on-deploy",
+  "template_file_id": "",
+  "description": "Master Google Slides template for PROMETHEUS pitch decks. Operators create the actual file in Drive (see master_template_README.md), upload its file ID into Secret Manager as PROMETHEUS_MASTER_DECK_ID, and paste it under template_file_id during the deploy step.",
+  "color_tokens": [
+    "primary",
+    "secondary",
+    "accent",
+    "bg",
+    "fg",
+    "muted",
+    "danger"
+  ],
+  "typography_slots": [
+    "heading",
+    "subheading",
+    "body",
+    "caption",
+    "footer"
+  ],
+  "global_placeholders": [
+    "{{COMPANY_NAME}}",
+    "{{TAGLINE}}",
+    "{{HEADING_FONT}}",
+    "{{BODY_FONT}}",
+    "{{PRIMARY_HEX}}",
+    "{{SECONDARY_HEX}}",
+    "{{ACCENT_HEX}}",
+    "{{BG_HEX}}",
+    "{{FG_HEX}}",
+    "{{LOGO_IMAGE_URL}}",
+    "{{FOOTER_NOTE}}",
+    "{{DATE_GENERATED}}"
+  ],
+  "layouts": {
+    "title": {
+      "order": 1,
+      "label": "Title",
+      "purpose": "Cover slide. Company name, tagline, optional logo.",
+      "placeholders": {
+        "title": "{{COMPANY_NAME}}",
+        "subtitle": "{{TAGLINE}}",
+        "footer": "{{FOOTER_NOTE}}"
+      },
+      "image_slot_id": "TITLE_HERO_IMAGE"
+    },
+    "problem": {
+      "order": 2,
+      "label": "Problem",
+      "purpose": "What pain are we addressing? Quantify if possible.",
+      "placeholders": {
+        "title": "{{SLIDE_2_TITLE}}",
+        "body": "{{SLIDE_2_BODY}}",
+        "notes": "{{SLIDE_2_NOTES}}"
+      },
+      "image_slot_id": "PROBLEM_VISUAL"
+    },
+    "solution": {
+      "order": 3,
+      "label": "Solution",
+      "purpose": "Our solution and the key insight that makes it work.",
+      "placeholders": {
+        "title": "{{SLIDE_3_TITLE}}",
+        "body": "{{SLIDE_3_BODY}}",
+        "notes": "{{SLIDE_3_NOTES}}"
+      },
+      "image_slot_id": "SOLUTION_HERO"
+    },
+    "market": {
+      "order": 4,
+      "label": "Market",
+      "purpose": "TAM/SAM/SOM with sourced numbers and CAGR context.",
+      "placeholders": {
+        "title": "{{SLIDE_4_TITLE}}",
+        "body": "{{SLIDE_4_BODY}}",
+        "notes": "{{SLIDE_4_NOTES}}",
+        "tam_value": "{{TAM_VALUE}}",
+        "sam_value": "{{SAM_VALUE}}",
+        "som_value": "{{SOM_VALUE}}"
+      },
+      "image_slot_id": "MARKET_CHART"
+    },
+    "business_model": {
+      "order": 5,
+      "label": "Business Model",
+      "purpose": "Revenue model + tiers + unit economics.",
+      "placeholders": {
+        "title": "{{SLIDE_5_TITLE}}",
+        "body": "{{SLIDE_5_BODY}}",
+        "notes": "{{SLIDE_5_NOTES}}",
+        "tier_1_name": "{{TIER_1_NAME}}",
+        "tier_1_price": "{{TIER_1_PRICE}}",
+        "tier_2_name": "{{TIER_2_NAME}}",
+        "tier_2_price": "{{TIER_2_PRICE}}",
+        "tier_3_name": "{{TIER_3_NAME}}",
+        "tier_3_price": "{{TIER_3_PRICE}}"
+      },
+      "image_slot_id": "PRICING_VISUAL"
+    },
+    "traction": {
+      "order": 6,
+      "label": "Traction",
+      "purpose": "Pre-launch signals (waitlist, LOIs) or post-launch metrics.",
+      "placeholders": {
+        "title": "{{SLIDE_6_TITLE}}",
+        "body": "{{SLIDE_6_BODY}}",
+        "notes": "{{SLIDE_6_NOTES}}"
+      },
+      "image_slot_id": "TRACTION_CHART"
+    },
+    "competition": {
+      "order": 7,
+      "label": "Competition",
+      "purpose": "Positioning matrix + key differentiator.",
+      "placeholders": {
+        "title": "{{SLIDE_7_TITLE}}",
+        "body": "{{SLIDE_7_BODY}}",
+        "notes": "{{SLIDE_7_NOTES}}",
+        "axis_x_label": "{{AXIS_X_LABEL}}",
+        "axis_y_label": "{{AXIS_Y_LABEL}}"
+      },
+      "image_slot_id": "COMPETITION_MATRIX"
+    },
+    "gtm": {
+      "order": 8,
+      "label": "Go-to-Market",
+      "purpose": "Channels, 90-day plan, key partnerships.",
+      "placeholders": {
+        "title": "{{SLIDE_8_TITLE}}",
+        "body": "{{SLIDE_8_BODY}}",
+        "notes": "{{SLIDE_8_NOTES}}",
+        "channel_1": "{{GTM_CHANNEL_1}}",
+        "channel_2": "{{GTM_CHANNEL_2}}",
+        "channel_3": "{{GTM_CHANNEL_3}}"
+      },
+      "image_slot_id": "GTM_VISUAL"
+    },
+    "financials": {
+      "order": 9,
+      "label": "Financials",
+      "purpose": "3-year P&L summary, runway, breakeven.",
+      "placeholders": {
+        "title": "{{SLIDE_9_TITLE}}",
+        "body": "{{SLIDE_9_BODY}}",
+        "notes": "{{SLIDE_9_NOTES}}",
+        "yr1_rev": "{{YR1_REV}}",
+        "yr2_rev": "{{YR2_REV}}",
+        "yr3_rev": "{{YR3_REV}}",
+        "runway_months": "{{RUNWAY_MONTHS}}",
+        "breakeven_month": "{{BREAKEVEN_MONTH}}"
+      },
+      "image_slot_id": "FINANCIALS_CHART"
+    },
+    "team": {
+      "order": 10,
+      "label": "Team",
+      "purpose": "Founders + key advisors. Mark gaps the round will fill.",
+      "placeholders": {
+        "title": "{{SLIDE_10_TITLE}}",
+        "body": "{{SLIDE_10_BODY}}",
+        "notes": "{{SLIDE_10_NOTES}}"
+      },
+      "image_slot_id": "TEAM_PHOTOS"
+    },
+    "ask": {
+      "order": 11,
+      "label": "Ask",
+      "purpose": "Round size, milestones, use of funds.",
+      "placeholders": {
+        "title": "{{SLIDE_11_TITLE}}",
+        "body": "{{SLIDE_11_BODY}}",
+        "notes": "{{SLIDE_11_NOTES}}",
+        "round_size_usd": "{{ROUND_SIZE_USD}}",
+        "milestone_1": "{{MILESTONE_1}}",
+        "milestone_2": "{{MILESTONE_2}}",
+        "milestone_3": "{{MILESTONE_3}}"
+      },
+      "image_slot_id": "ASK_VISUAL"
+    },
+    "contact": {
+      "order": 12,
+      "label": "Contact",
+      "purpose": "Name, email, calendly. Optional one-line CTA.",
+      "placeholders": {
+        "title": "Thanks",
+        "body": "{{CONTACT_BLOCK}}",
+        "notes": "{{SLIDE_12_NOTES}}",
+        "email": "{{CONTACT_EMAIL}}",
+        "scheduling_url": "{{CONTACT_SCHED_URL}}"
+      },
+      "image_slot_id": "CONTACT_HERO"
+    }
+  },
+  "image_slot_defaults": {
+    "TITLE_HERO_IMAGE": {"aspect_ratio": "16:9"},
+    "PROBLEM_VISUAL": {"aspect_ratio": "1:1"},
+    "SOLUTION_HERO": {"aspect_ratio": "16:9"},
+    "MARKET_CHART": {"aspect_ratio": "4:3"},
+    "PRICING_VISUAL": {"aspect_ratio": "4:3"},
+    "TRACTION_CHART": {"aspect_ratio": "4:3"},
+    "COMPETITION_MATRIX": {"aspect_ratio": "4:3"},
+    "GTM_VISUAL": {"aspect_ratio": "16:9"},
+    "FINANCIALS_CHART": {"aspect_ratio": "4:3"},
+    "TEAM_PHOTOS": {"aspect_ratio": "16:9"},
+    "ASK_VISUAL": {"aspect_ratio": "1:1"},
+    "CONTACT_HERO": {"aspect_ratio": "16:9"}
+  },
+  "rendering_strategy": {
+    "primary": "drive.files.copy then slides.batchUpdate replaceAllText",
+    "fallback": "slides.presentations.create + per-slide createSlide",
+    "image_strategy": "Imagen 3 with brand palette context, uploaded to GCS, signed URL inserted via createImage request"
+  }
+}

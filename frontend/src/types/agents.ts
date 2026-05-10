@@ -345,6 +345,50 @@ export const ExecutiveSummaryResultSchema = z.object({
 });
 export type ExecutiveSummaryResult = z.infer<typeof ExecutiveSummaryResultSchema>;
 
+// ─── Reasoning stream (UI-side) ──────────────────────────────────────────────
+
+/**
+ * AgentRole — string identifier of an agent, used by the reasoning UI.
+ *
+ * Mirrors `AgentName` but kept loose (string) so the reasoning sidebar can
+ * stay decoupled from the canonical agent enum (e.g. for future "tool"
+ * sub-agents that aren't in the 13).
+ */
+export type AgentRole = string;
+
+/**
+ * ReasoningStreamEvent — the union the ReasoningSidebar consumes.
+ *
+ * Backed by the SSE wire format (see `types/sse.ts`) but reduced to the
+ * subset the UI cares about. Producers (GeneratePage) map raw SSE events
+ * into this shape before passing them to the sidebar.
+ */
+export type ReasoningStreamEvent =
+  | {
+      kind: "agent_started";
+      agent: AgentRole;
+      wave: number;
+      t_ms: number;
+    }
+  | {
+      kind: "agent_token";
+      agent: AgentRole;
+      token: string;
+      t_ms: number;
+    }
+  | {
+      kind: "agent_completed";
+      agent: AgentRole;
+      summary: string | null;
+      t_ms: number;
+    }
+  | {
+      kind: "agent_failed";
+      agent: AgentRole;
+      reason: string;
+      t_ms: number;
+    };
+
 // ─── Aggregate ───────────────────────────────────────────────────────────────
 
 export interface AgentResults {

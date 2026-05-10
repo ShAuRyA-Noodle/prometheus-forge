@@ -1,0 +1,60 @@
+{
+  "name": "PROMETHEUS",
+  "short_name": "Prometheus",
+  "description": "Whisper an idea. Get a company. Multi-agent system that produces a coherent startup package in ~75-120 seconds.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "en-US",
+  "dir": "ltr",
+  "theme_color": "#09090B",
+  "background_color": "#09090B",
+  "categories": ["productivity", "business", "developer", "creativity"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New generation",
+      "short_name": "New",
+      "url": "/",
+      "description": "Start a new run from voice or text."
+    },
+    {
+      "name": "Companies",
+      "short_name": "Companies",
+      "url": "/companies",
+      "description": "Open the companies workspace."
+    },
+    {
+      "name": "Billing",
+      "short_name": "Billing",
+      "url": "/billing",
+      "description": "Manage subscription and usage."
+    }
+  ]
+}

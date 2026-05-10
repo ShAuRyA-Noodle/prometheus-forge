@@ -79,6 +79,17 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     fcm_server_key: str = ""
 
+    # === Analytics (PostHog) ===
+    posthog_key: str = ""
+    posthog_host: str = "https://app.posthog.com"
+
+    # === Share tokens ===
+    share_token_secret: str = ""  # falls back to secret_key when blank
+    share_token_ttl_days: int = 30
+
+    # === Notion / Linear ===
+    notion_api_version: str = "2022-06-28"
+
     # === Cost guardrails ===
     max_tokens_per_session: int = 120_000
     max_cost_usd_per_session: float = 2.50

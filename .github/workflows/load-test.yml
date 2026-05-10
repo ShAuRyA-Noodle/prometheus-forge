@@ -1,0 +1,70 @@
+name: Load test
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'   # weekly Sunday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+env:
+  PROJECT_ID_STAGING: prometheus-staging
+  REGION: us-central1
+  STAGING_HOST: https://staging.prometheus.app
+
+jobs:
+  locust:
+    name: Locust against staging (30 min)
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - run: pip install locust
+
+      - name: Run Locust
+        run: |
+          locust -f scripts/locustfile.py \
+            --host="${{ env.STAGING_HOST }}" \
+            --users=200 --spawn-rate=20 --run-time=30m --headless \
+            --csv=load --html=load-report.html
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with: { name: load-test, path: 'load*', retention-days: 30 }
+
+      - name: Compare to baseline (PERF_BASELINES.md)
+        id: compare
+        run: |
+          set -euo pipefail
+          # Parse load_stats.csv and compare with baselines
+          # Baseline values pulled from PERF_BASELINES.md (curated by hand)
+          P95_TARGET_GENERATE_MS=510
+          P95_TARGET_SESSION_MS=85
+          AVG_P95=$(awk -F',' 'NR>1 && $1 ~ /\/api\/generate/ {print $9}' load_stats.csv | head -1)
+          AVG_P95_SESSION=$(awk -F',' 'NR>1 && $1 ~ /\/api\/session/ {print $9}' load_stats.csv | head -1)
+          echo "Generate p95 (load): ${AVG_P95}ms; baseline: ${P95_TARGET_GENERATE_MS}ms"
+          echo "Session  p95 (load): ${AVG_P95_SESSION}ms; baseline: ${P95_TARGET_SESSION_MS}ms"
+          # Fail if 20% over baseline
+          THRESHOLD=$((P95_TARGET_GENERATE_MS * 120 / 100))
+          if [ "${AVG_P95%.*}" -gt "$THRESHOLD" ]; then
+            echo "REGRESSION_DETECTED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Open issue on regression
+        if: env.REGRESSION_DETECTED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `[perf] weekly load test detected p95 regression on ${new Date().toISOString().slice(0,10)}`,
+              labels: ['perf', 'regression'],
+              body: `Weekly Locust against staging detected p95 regression > 20% on /api/generate. See workflow run: ${context.runId}`
+            });
