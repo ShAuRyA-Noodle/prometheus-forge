@@ -121,6 +121,7 @@ class Orchestrator:
     async def run(self) -> Session:
         self.session.status = SessionStatus.RUNNING
         self.session.started_at = datetime.now(UTC)
+        mode = str(self.session.metadata.get("mode", "full"))
 
         try:
             # Pre-wave: idea_parser → articulation (sequential).
@@ -131,6 +132,14 @@ class Orchestrator:
             gate_1 = await self._run_gate("wave_1", wave_1_gate)
             if not gate_1.passed:
                 return self._finalize_partial(gate_1)
+
+            # Quick mode: 3-agent preview. Stop after Wave 1 + Gate 1 PASS.
+            # User gets brand + market + business model + risk in ~30s.
+            if mode == "quick":
+                self.session.status = SessionStatus.COMPLETED
+                self.session.metadata["mode_completed_at_wave"] = "wave_1"
+                log.info("orchestrator.quick_mode_complete", session_id=self.session.session_id)
+                return self.session
 
             # Wave 2.
             await self._run_parallel(WAVE_2)
@@ -145,6 +154,12 @@ class Orchestrator:
                 return self._finalize_partial(gate_3)
 
             self.session.status = SessionStatus.COMPLETED
+            self.session.metadata["mode_completed_at_wave"] = "wave_3"
+
+            # Deep mode: after full pipeline, auto-enqueue marketplace human-review jobs.
+            # The user gets the full deck immediately AND a 24-hour expert pass.
+            if mode == "deep":
+                await self._enqueue_deep_review_jobs()
 
         except CostBudgetExceeded as exc:
             log.error("orchestrator.budget_exceeded", error=str(exc))
@@ -331,6 +346,48 @@ class Orchestrator:
                 )
         self.session.completed_at = datetime.now(UTC)
         return self.session
+
+    async def _enqueue_deep_review_jobs(self) -> None:
+        """Deep mode: auto-create marketplace jobs for human expert review.
+
+        Lawyer reviews the generated ToS/Privacy, fractional CFO reviews the
+        financial model, brand designer polishes the logo+palette. All three
+        jobs are queued at standard marketplace prices; the user can decline
+        or upgrade individual ones from the ResultsPage marketplace tab.
+        """
+        try:
+            from services import billing_service, firestore_service, notification_service
+
+            company_id = self.session.company_id or self.session.session_id
+            for job_type in ("lawyer_review", "cfo_review", "brand_polish"):
+                try:
+                    await billing_service.create_marketplace_job(
+                        uid=self.session.user_uid,
+                        company_id=company_id,
+                        job_type=job_type,
+                        session_id=self.session.session_id,
+                        status="pending_payment",
+                    )
+                except Exception:  # noqa: BLE001
+                    log.exception("orchestrator.deep_review_job_create_failed", job_type=job_type)
+
+            try:
+                await firestore_service.update_session_metadata(
+                    self.session.session_id,
+                    {"deep_mode_jobs_enqueued_at": datetime.now(UTC).isoformat()},
+                )
+            except Exception:  # noqa: BLE001
+                log.exception("orchestrator.deep_metadata_write_failed")
+
+            try:
+                await notification_service.send_deep_mode_review_pending(
+                    uid=self.session.user_uid,
+                    session_id=self.session.session_id,
+                )
+            except Exception:  # noqa: BLE001
+                log.exception("orchestrator.deep_notification_failed")
+        except Exception:  # noqa: BLE001
+            log.exception("orchestrator.enqueue_deep_review_unexpected")
 
     async def _post_wave_cleanup(self) -> None:
         """Post-wave cleanup callback. Persists the final session if a sync hook

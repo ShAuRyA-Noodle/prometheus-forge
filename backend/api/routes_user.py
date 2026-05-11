@@ -129,6 +129,34 @@ async def export_my_data(user=Depends(get_current_user)) -> Response:
     )
 
 
+class PushTokenRequest(BaseModel):
+    token: str = Field(..., min_length=10, max_length=4096)
+    platform: str = Field(..., pattern=r"^(web|ios|android)$")
+    locale: str | None = None
+
+
+@router.post(
+    "/push-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Register a push notification token (Web Push, APNS, FCM).",
+)
+async def register_push_token(
+    body: PushTokenRequest,
+    user: User = Depends(get_current_user),
+) -> None:
+    """Persists the push token under users/{uid}/push_tokens/{platform}. Idempotent.
+    Capacitor (iOS/Android) and the web service-worker push handler call this.
+    """
+    from services import firestore_service
+
+    persist = getattr(firestore_service, "upsert_push_token", None)
+    if persist is None:
+        log.warning("push_token.persist_skipped", reason="missing_upsert_push_token", uid=user.uid)
+        return None
+    await persist(uid=user.uid, platform=body.platform, token=body.token, locale=body.locale)
+    return None
+
+
 async def _gather_user_data(uid: str) -> dict[str, dict]:
     from services import firestore_service
 

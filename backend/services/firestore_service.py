@@ -379,10 +379,115 @@ async def tombstone_session(sid: str) -> None:
     log.info("firestore.session.tombstone", sid=sid)
 
 
+async def update_session_metadata(sid: str, patch: dict[str, Any]) -> None:
+    """Shallow-merge a patch dict into sessions/{sid}.metadata. Best-effort:
+    swallows transport errors so callers (orchestrator) don't crash."""
+    def _do() -> None:
+        try:
+            client = _get_db()
+            ref = client.collection("sessions").document(sid)
+            ref.set({"metadata": patch}, merge=True)
+        except Exception:  # noqa: BLE001
+            log.exception("firestore.update_session_metadata.failed", sid=sid)
+
+    await asyncio.to_thread(_do)
+
+
+async def find_marketplace_job(
+    *,
+    uid: str,
+    company_id: str,
+    job_type: str,
+    status_in: tuple[str, ...] = ("pending_payment", "in_progress"),
+) -> str | None:
+    """Find an existing marketplace job for (uid, company_id, job_type) where
+    status is in ``status_in``. Returns job id or None."""
+    def _do() -> str | None:
+        try:
+            client = _get_db()
+            q = (
+                client.collection("marketplace_jobs")
+                .where("uid", "==", uid)
+                .where("company_id", "==", company_id)
+                .where("job_type", "==", job_type)
+                .limit(5)
+            )
+            for doc in q.stream():
+                data = doc.to_dict() or {}
+                if data.get("status") in status_in:
+                    return doc.id
+        except Exception:  # noqa: BLE001
+            log.exception("firestore.find_marketplace_job.failed", uid=uid, job_type=job_type)
+        return None
+
+    return await asyncio.to_thread(_do)
+
+
+async def create_marketplace_job(
+    *,
+    uid: str,
+    company_id: str,
+    job_type: str,
+    session_id: str | None,
+    status: str,
+) -> str:
+    """Write a new marketplace job doc. Returns the new doc id (empty on failure)."""
+    def _do() -> str:
+        try:
+            client = _get_db()
+            doc_ref = client.collection("marketplace_jobs").document()
+            doc_ref.set(
+                {
+                    "uid": uid,
+                    "company_id": company_id,
+                    "session_id": session_id,
+                    "job_type": job_type,
+                    "status": status,
+                    "created_at": datetime.now(timezone.utc),
+                }
+            )
+            return doc_ref.id
+        except Exception:  # noqa: BLE001
+            log.exception("firestore.create_marketplace_job.failed", uid=uid, job_type=job_type)
+            return ""
+
+    return await asyncio.to_thread(_do)
+
+
+async def upsert_push_token(*, uid: str, platform: str, token: str, locale: str | None = None) -> None:
+    """Idempotent push-token registration. Stored at users/{uid}/push_tokens/{platform}.
+    Keyed by platform so the same user can have web + iOS + android tokens live concurrently.
+    """
+    def _do() -> None:
+        try:
+            client = _get_db()
+            ref = (
+                client.collection("users")
+                .document(uid)
+                .collection("push_tokens")
+                .document(platform)
+            )
+            ref.set(
+                {
+                    "token": token,
+                    "platform": platform,
+                    "locale": locale,
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                merge=True,
+            )
+        except Exception:  # noqa: BLE001
+            log.exception("firestore.upsert_push_token.failed", uid=uid, platform=platform)
+
+    await asyncio.to_thread(_do)
+
+
 __all__ = [
     "cancel_session",
+    "create_marketplace_job",
     "create_session",
     "find_existing_session_by_idempotency_key",
+    "find_marketplace_job",
     "get_session_branches",
     "get_user",
     "get_user_companies",
@@ -390,7 +495,9 @@ __all__ = [
     "read_session",
     "record_usage",
     "tombstone_session",
+    "upsert_push_token",
     "update_agent_status",
+    "update_session_metadata",
     "update_session_status",
     "upsert_user",
     "write_agent_output",

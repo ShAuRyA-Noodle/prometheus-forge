@@ -165,4 +165,46 @@ async def get_user_tier(uid: str) -> SubscriptionTier:
     return user.tier
 
 
-__all__ = ["create_checkout_session", "get_user_tier", "handle_webhook"]
+async def create_marketplace_job(
+    *,
+    uid: str,
+    company_id: str,
+    job_type: str,
+    session_id: str | None = None,
+    status: str = "pending_payment",
+) -> str:
+    """Create a marketplace job (lawyer_review / cfo_review / brand_polish).
+
+    Used by Deep mode orchestrator path and the /api/marketplace/order route.
+    Returns the new job id. Idempotent against an open job for the same
+    (uid, company_id, job_type) — duplicates return the existing id.
+    """
+    from services import firestore_service
+
+    existing = await firestore_service.find_marketplace_job(
+        uid=uid,
+        company_id=company_id,
+        job_type=job_type,
+        status_in=("pending_payment", "in_progress"),
+    )
+    if existing:
+        log.info("billing.marketplace.dedup", uid=uid, job_type=job_type, job_id=existing)
+        return existing
+
+    job_id = await firestore_service.create_marketplace_job(
+        uid=uid,
+        company_id=company_id,
+        session_id=session_id,
+        job_type=job_type,
+        status=status,
+    )
+    log.info("billing.marketplace.created", uid=uid, job_type=job_type, job_id=job_id)
+    return job_id
+
+
+__all__ = [
+    "create_checkout_session",
+    "create_marketplace_job",
+    "get_user_tier",
+    "handle_webhook",
+]

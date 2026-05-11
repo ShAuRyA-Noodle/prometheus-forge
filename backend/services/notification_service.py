@@ -155,4 +155,38 @@ async def send_market_digest(user: User, company: dict[str, Any], diffs: list[di
     return await _send(str(user.email), subject, html, text)
 
 
-__all__ = ["send_completion_email", "send_market_digest"]
+async def send_deep_mode_review_pending(*, uid: str, session_id: str) -> bool:
+    """Deep mode: notify user that human-review jobs have been auto-enqueued
+    and direct them to the marketplace tab to confirm + pay.
+
+    Best-effort: silently no-ops if the user has no email or the email
+    provider is unconfigured (orchestrator never blocks on notification).
+    """
+    from services import firestore_service
+
+    user = await firestore_service.get_user(uid)
+    if user is None or not user.email:
+        return False
+    subject = "Your PROMETHEUS Deep Review jobs are ready to confirm"
+    body_html = (
+        "<p>Hey — your full company package is ready.</p>"
+        "<p>Because you picked <strong>Deep mode</strong>, we've auto-queued three "
+        "expert-review jobs against your generation: <em>lawyer ToS/Privacy review</em>, "
+        "<em>fractional CFO model review</em>, and <em>brand designer polish</em>.</p>"
+        f'<p><a href="https://prometheus.app/companies/{session_id}/marketplace">'
+        "Confirm or decline each one →</a></p>"
+        "<p>Expert turnaround: 24 hours from confirmation.</p>"
+    )
+    body_text = (
+        "Your full company package is ready. Deep mode queued 3 expert-review jobs:\n"
+        "- Lawyer ToS/Privacy review\n- Fractional CFO model review\n- Brand designer polish\n\n"
+        f"Confirm: https://prometheus.app/companies/{session_id}/marketplace"
+    )
+    return await _send(str(user.email), subject, body_html, body_text)
+
+
+__all__ = [
+    "send_completion_email",
+    "send_deep_mode_review_pending",
+    "send_market_digest",
+]
