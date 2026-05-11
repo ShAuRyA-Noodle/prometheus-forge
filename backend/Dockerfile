@@ -2,7 +2,7 @@
 # IMPORTANT: NEVER copy service-account JSON into image. Use Workload Identity Federation in prod.
 
 # ─── Stage 1: builder ────────────────────────────────────────────────────────
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 ARG GIT_SHA=unknown
 ENV PYTHONDONTWRITEBYTECODE=1 \
