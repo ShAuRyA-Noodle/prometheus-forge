@@ -56,7 +56,7 @@ export function DeckEditor({
   const [exportBusy, setExportBusy] = useState<"pdf" | "pptx" | "gslides" | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const activeSlide = deck.slides[activeIdx] ?? deck.slides[0];
+  const activeSlide = (deck.slides[activeIdx] ?? deck.slides[0])!;
 
   const updateSlideAt = useCallback(
     (idx: number, patch: Partial<PitchSlide>) => {

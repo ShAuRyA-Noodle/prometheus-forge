@@ -12,7 +12,7 @@
  */
 import DOMPurify from "dompurify";
 
-const HTML_BASE_CONFIG: DOMPurify.Config = {
+const HTML_BASE_CONFIG: import("dompurify").Config = {
   USE_PROFILES: { html: true },
   ALLOWED_TAGS: [
     "a", "abbr", "address", "article", "aside", "b", "blockquote", "br",
@@ -37,7 +37,7 @@ const HTML_BASE_CONFIG: DOMPurify.Config = {
   WHOLE_DOCUMENT: false,
 };
 
-const SVG_CONFIG: DOMPurify.Config = {
+const SVG_CONFIG: import("dompurify").Config = {
   USE_PROFILES: { svg: true, svgFilters: false },
   FORBID_TAGS: ["script", "foreignObject", "iframe", "image"],
   FORBID_ATTR: ["onload", "onerror", "onclick", "onmouseover", "xlink:href"],

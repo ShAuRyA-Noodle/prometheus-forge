@@ -195,6 +195,7 @@ export function GeneratePage(): JSX.Element {
         session.error_message ?? "See agent dashboard for details.",
       );
     }
+    return undefined;
   }, [session, sessionId, navigate, errorToast]);
 
   // ─── Derived data ──────────────────────────────────────────────────────────

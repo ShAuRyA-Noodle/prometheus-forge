@@ -23,11 +23,11 @@ _ALLOWED_TAGS: set[str] = {
     "button", "caption", "cite", "code", "col", "colgroup", "details", "dd",
     "div", "dl", "dt", "em", "fieldset", "figcaption", "figure", "footer",
     "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr", "i",
-    "img", "input", "kbd", "label", "li", "main", "mark", "meta", "nav", "ol",
+    "img", "input", "kbd", "label", "li", "main", "mark", "nav", "ol",
     "optgroup", "option", "p", "picture", "pre", "q", "section", "select",
-    "small", "source", "span", "strong", "style", "sub", "summary", "sup",
+    "small", "source", "span", "strong", "sub", "summary", "sup",
     "svg", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "time",
-    "title", "tr", "u", "ul", "wbr",
+    "tr", "u", "ul", "wbr",
     # SVG primitives we accept inline within <svg>
     "circle", "defs", "ellipse", "g", "line", "linearGradient", "path",
     "polygon", "polyline", "radialGradient", "rect", "stop", "text", "tspan",
@@ -36,10 +36,10 @@ _ALLOWED_TAGS: set[str] = {
 
 _ALLOWED_ATTRS: dict[str, set[str]] = {
     "*": {
-        "class", "id", "style", "title", "aria-label", "aria-hidden", "role",
+        "class", "id", "title", "aria-label", "aria-hidden", "role",
         "lang", "dir", "tabindex", "data-*",
     },
-    "a": {"href", "rel", "target"},
+    "a": {"href", "target"},
     "img": {"src", "alt", "width", "height", "loading", "decoding", "srcset", "sizes"},
     "source": {"srcset", "sizes", "media", "type"},
     "input": {"type", "name", "placeholder", "value", "required", "aria-label"},
@@ -65,10 +65,9 @@ _ALLOWED_ATTRS: dict[str, set[str]] = {
     "use": {"href", "x", "y", "width", "height"},
     "text": {"x", "y", "font-family", "font-size", "fill", "text-anchor"},
     "tspan": {"x", "y", "dx", "dy", "font-family", "font-size", "fill"},
-    "style": set(),  # contents allowed; tag itself OK
 }
 
-_ALLOWED_URL_SCHEMES = ("http", "https", "mailto", "tel", "data")  # data only for img
+_ALLOWED_URL_SCHEMES = ("http", "https", "mailto", "tel")  # never data: for href (XSS vector)
 
 _DEFAULT_CSP = (
     "default-src 'none'; "
@@ -128,6 +127,11 @@ def _inject_csp(html: str) -> str:
     return csp_tag + html
 
 
+_POST_SCRUB_URI = re.compile(r"(?i)(java|vb)script:")
+_POST_SCRUB_DATA_HTML = re.compile(r"(?i)data:\s*text/html[^\s\"'>]*")
+_POST_SCRUB_SCRIPT_TAG = re.compile(r"(?i)<\s*/?\s*script\b[^>]*>")
+
+
 def sanitize_html(html: str) -> str:
     if not html:
         return ""
@@ -136,6 +140,12 @@ def sanitize_html(html: str) -> str:
     except Exception as e:  # noqa: BLE001
         log.warning("sanitize.nh3_failed_falling_back", err=str(e))
         cleaned = _sanitize_html_bleach(html)
+    # Defense in depth: scrub residual XSS substrings that survived as text
+    # content or attribute values (e.g. bare "javascript:" text, <script> in
+    # alt="" content). Belt-and-suspenders over the sanitizer's structural pass.
+    cleaned = _POST_SCRUB_URI.sub("[blocked-uri]", cleaned)
+    cleaned = _POST_SCRUB_DATA_HTML.sub("[blocked-uri]", cleaned)
+    cleaned = _POST_SCRUB_SCRIPT_TAG.sub("", cleaned)
     return _inject_csp(cleaned)
 
 

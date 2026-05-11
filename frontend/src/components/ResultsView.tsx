@@ -65,8 +65,14 @@ const LandingEditorView = lazy(() =>
     ),
   })),
 );
-const BrandRefinerView = lazy(() =>
-  import("./BrandRefiner").catch(() => ({
+const BrandRefinerView = lazy(async () => {
+  try {
+    const mod = await import("./BrandRefiner");
+    const def = (mod as { default?: unknown }).default ?? (mod as { BrandRefiner?: unknown }).BrandRefiner;
+    if (def) return { default: def as React.ComponentType<{ brand: AgentResults["brand_identity"] }> };
+    throw new Error("no default export");
+  } catch {
+    return {
     default: ({
       brand,
     }: {
@@ -79,8 +85,9 @@ const BrandRefinerView = lazy(() =>
           Brand not available.
         </p>
       ),
-  })),
-);
+    };
+  }
+});
 
 interface ResultsViewProps {
   sessionId: string;
@@ -303,6 +310,7 @@ export function ResultsView({
           )}
           {active === "landing" && results.landing_page && (
             <LandingEditorView
+              sessionId={sessionId}
               html={results.landing_page.html_sanitized}
               css={results.landing_page.css}
             />

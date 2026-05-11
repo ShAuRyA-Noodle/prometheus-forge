@@ -172,16 +172,20 @@ const ThumbItem = memo(function ThumbItem({
       role="option"
       aria-selected={active}
       tabIndex={active ? 0 : -1}
+      // Framer-Motion's `motion.li` types onDrag* as pan handlers; HTML5 drag is
+      // delivered via the same DOM events. Cast to unknown to bridge the typing.
       draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", String(idx));
-        onDragStart(idx);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-      }}
+      {...({
+        onDragStart: (e: React.DragEvent<HTMLLIElement>) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(idx));
+          onDragStart(idx);
+        },
+        onDragOver: (e: React.DragEvent<HTMLLIElement>) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        },
+      } as unknown as Record<string, unknown>)}
       onDragEnter={() => onDragEnterIdx(idx)}
       onDragEnd={onDragEnd}
       onDrop={onDragEnd}

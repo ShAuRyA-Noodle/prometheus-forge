@@ -41,7 +41,7 @@ _SA_RE = re.compile(
     re.I,
 )
 _BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9_\-\.]{20,}", re.I)
-_OPENAI_RE = re.compile(r"\bsk-[A-Za-z0-9]{32,}\b")
+_OPENAI_RE = re.compile(r"\bsk-(?:[A-Za-z0-9]+-)*[A-Za-z0-9]{20,}\b")
 _AWS_AKID_RE = re.compile(r"\bAKIA[0-9A-Z]{16}\b")
 
 

@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
               "@tiptap/extension-image",
               "@tiptap/extension-link",
             ],
-            "vendor-firebase": ["firebase"],
+            "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore"],
             "vendor-charts": ["recharts"],
           },
         },

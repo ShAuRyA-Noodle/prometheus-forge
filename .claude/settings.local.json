@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gcloud auth *)",
+      "Bash(gcloud projects list)",
+      "Bash(gcloud projects describe *)",
+      "Bash(gcloud config list)",
+      "Bash(gcloud config set *)",
+      "Bash(gcloud run services list *)",
+      "Bash(gcloud run revisions list *)",
+      "Bash(gcloud run services describe *)",
+      "Bash(gcloud secrets list *)",
+      "Bash(gcloud secrets describe *)",
+      "Bash(gcloud tasks queues describe *)",
+      "Bash(gcloud logging read *)",
+      "Bash(gcloud monitoring *)",
+      "Bash(gcloud firestore *)",
+      "Bash(firebase login *)",
+      "Bash(firebase projects:list)",
+      "Bash(firebase use *)",
+      "Bash(firebase deploy --only firestore:rules *)",
+      "Bash(firebase deploy --only firestore:indexes *)",
+      "Bash(stripe listen *)",
+      "Bash(stripe events list *)",
+      "Bash(stripe events resend *)",
+      "Bash(./scripts/dev.sh)",
+      "Bash(./scripts/test.sh *)",
+      "Bash(./scripts/benchmark.sh *)",
+      "Bash(./scripts/seed-golden-ideas.sh)",
+      "Bash(./scripts/local-emulator.sh)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(* --no-verify *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
+      "Bash(gcloud iam service-accounts keys create *)",
+      "Bash(./scripts/deploy.sh prod)"
+    ]
+  },
+  "env": {
+    "ENV": "dev",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
