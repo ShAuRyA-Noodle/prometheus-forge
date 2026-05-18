@@ -2,10 +2,10 @@
 # Pin all. CI runs pip-audit + Snyk.
 
 # === API server ===
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-pydantic==2.10.3
-pydantic-settings==2.6.1
+fastapi>=0.119.0
+uvicorn[standard]>=0.32.1
+pydantic>=2.10.3
+pydantic-settings>=2.6.1
 python-multipart>=0.0.27
 
 # === Google AI / ADK ===
