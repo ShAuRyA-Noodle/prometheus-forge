@@ -29,67 +29,67 @@ google-auth-oauthlib>=1.2.2
 google-auth-httplib2>=0.2.0
 
 # === Firebase Admin ===
-firebase-admin==6.6.0
+firebase-admin>=6.6.0
 
 # === Async / HTTP ===
-httpx==0.28.1
+httpx>=0.28.1
 aiohttp>=3.13.4
-tenacity==9.0.0
+tenacity>=9.0.0
 
 # === Auth ===
 python-jose[cryptography]>=3.4.0
-passlib[bcrypt]==1.7.4
+passlib[bcrypt]>=1.7.4
 PyJWT>=2.12.0
 
 # === Stripe ===
-stripe==11.4.0
+stripe>=11.4.0
 
 # === External integrations ===
-deepgram-sdk==3.10.0
+deepgram-sdk>=3.10.0
 
 # === Sanitization / validation ===
-bleach==6.2.0
-nh3==0.2.20
-beautifulsoup4==4.12.3
+bleach>=6.2.0
+nh3>=0.2.20
+beautifulsoup4>=4.12.3
 lxml>=6.1.0
-jsonschema==4.23.0
-json-repair==0.35.0
+jsonschema>=4.23.0
+json-repair>=0.35.0
 
 # === Finance engine ===
-numpy==2.2.0
-pandas==2.2.3
-numpy-financial==1.0.0
-sympy==1.13.3
+numpy>=2.2.0
+pandas>=2.2.3
+numpy-financial>=1.0.0
+sympy>=1.13.3
 
 # === Image processing ===
 Pillow>=12.2.0
 
 # === Color / WCAG ===
-colormath==3.0.0
-wcag-contrast-ratio==0.9
+colormath>=3.0.0
+wcag-contrast-ratio>=0.9
 
 # === Templating ===
 jinja2>=3.1.6
 
 # === Observability ===
-structlog==24.4.0
-opentelemetry-api==1.29.0
-opentelemetry-sdk==1.29.0
-opentelemetry-instrumentation-fastapi==0.50b0
-opentelemetry-instrumentation-httpx==0.50b0
-opentelemetry-exporter-gcp-trace==1.9.0
+structlog>=24.4.0
+opentelemetry-api>=1.29.0
+opentelemetry-sdk>=1.29.0
+opentelemetry-instrumentation-fastapi>=0.50b0
+opentelemetry-instrumentation-httpx>=0.50b0
+opentelemetry-exporter-gcp-trace>=1.9.0
 
 # === Rate limiting / caching ===
-limits==3.13.0
-redis==5.2.1
-cachetools==5.5.0
+limits>=3.13.0
+redis>=5.2.1
+cachetools>=5.5.0
 
 # === Misc ===
 python-dotenv>=1.2.2
-typer==0.15.1
-rich==13.9.4
+typer>=0.15.1
+rich>=13.9.4
 orjson>=3.11.6
-PyYAML==6.0.2
+PyYAML>=6.0.2
 
 # === Dev ===
 pytest>=9.0.3
@@ -97,12 +97,12 @@ pytest-asyncio>=1.0.0
 pytest-cov>=7.0.0
 pytest-mock>=3.15.0
 pytest-httpx>=0.35.0
-ruff==0.8.4
-mypy==1.13.0
-types-PyYAML==6.0.12.20240917
-types-bleach==6.2.0.20241123
-hypothesis==6.122.6
-freezegun==1.5.1
-respx==0.22.0
+ruff>=0.8.4
+mypy>=1.13.0
+types-PyYAML>=6.0.12.20240917
+types-bleach>=6.2.0.20241123
+hypothesis>=6.122.6
+freezegun>=1.5.1
+respx>=0.22.0
 pyjwt>=2.12.0
 pillow>=12.2.0
