@@ -33,3 +33,6 @@ coverage/
 docs/superpowers/specs/*.draft.md
 backend/.venv/
 backend/venv/
+
+# TS incremental build info
+*.tsbuildinfo
