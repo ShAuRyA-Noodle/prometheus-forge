@@ -89,7 +89,7 @@ python-dotenv>=1.2.2
 typer>=0.15.1
 rich>=13.9.4
 orjson>=3.11.6
-PyYAML>=6.0.2
+PyYAML>=6.0.3
 
 # === Dev ===
 pytest>=9.0.3
