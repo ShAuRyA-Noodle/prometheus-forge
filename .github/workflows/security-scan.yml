@@ -23,7 +23,7 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r backend/requirements.txt --format=json --output=pip-audit.json || echo "AUDIT_FAILED=true" >> $GITHUB_ENV
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: pip-audit-report, path: pip-audit.json, retention-days: 30 }
       - name: Open issue on findings
@@ -52,7 +52,7 @@ jobs:
           cd frontend
           npm ci
           npm audit --audit-level=high --json > ../npm-audit.json || echo "AUDIT_FAILED=true" >> $GITHUB_ENV
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: npm-audit-report, path: npm-audit.json, retention-days: 30 }
       - name: Open issue on findings
