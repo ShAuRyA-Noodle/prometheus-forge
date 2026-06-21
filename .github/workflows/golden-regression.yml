@@ -43,7 +43,7 @@ jobs:
           cd backend
           pytest tests/golden -q --tb=short --json-report --json-report-file=golden-report.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: golden-report, path: backend/golden-report.json, retention-days: 14 }
 

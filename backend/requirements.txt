@@ -2,7 +2,7 @@
 # Pin all. CI runs pip-audit + Snyk.
 
 # === API server ===
-fastapi>=0.119.0
+fastapi>=0.138.0
 uvicorn[standard]>=0.32.1
 pydantic>=2.10.3
 pydantic-settings>=2.6.1
@@ -24,12 +24,12 @@ google-cloud-monitoring>=2.27.1
 
 # === Workspace APIs ===
 google-api-python-client>=2.170.0
-google-auth>=2.40.0
+google-auth>=2.55.0
 google-auth-oauthlib>=1.2.2
 google-auth-httplib2>=0.2.0
 
 # === Firebase Admin ===
-firebase-admin>=6.6.0
+firebase-admin>=6.9.0
 
 # === Async / HTTP ===
 httpx>=0.28.1
@@ -56,7 +56,7 @@ jsonschema>=4.23.0
 json-repair>=0.35.0
 
 # === Finance engine ===
-numpy>=2.2.0
+numpy>=2.4.6
 pandas>=2.2.3
 numpy-financial>=1.0.0
 sympy>=1.13.3
@@ -89,7 +89,7 @@ python-dotenv>=1.2.2
 typer>=0.15.1
 rich>=13.9.4
 orjson>=3.11.6
-PyYAML>=6.0.2
+PyYAML>=6.0.3
 
 # === Dev ===
 pytest>=9.0.3

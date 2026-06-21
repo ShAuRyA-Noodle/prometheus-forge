@@ -28,7 +28,7 @@ jobs:
           cd backend
           python -m services.judge_service --bench --output=judge-report.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: judge-report, path: backend/judge-report.json, retention-days: 60 }
 
       - name: Score gate (≥0.74 avg coherence)
