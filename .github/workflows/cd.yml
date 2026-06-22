@@ -24,7 +24,7 @@ jobs:
     outputs:
       sha: ${{ steps.short-sha.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: short-sha
         run: echo "value=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -77,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Authenticate to GCP (staging)
         uses: google-github-actions/auth@v2
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Authenticate to GCP (prod)
         uses: google-github-actions/auth@v2
