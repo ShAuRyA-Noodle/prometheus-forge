@@ -45,7 +45,7 @@ PyJWT>=2.12.0
 stripe>=11.4.0
 
 # === External integrations ===
-deepgram-sdk>=3.10.0
+deepgram-sdk>=3.11.0
 
 # === Sanitization / validation ===
 bleach>=6.2.0
